@@ -69,12 +69,22 @@ sales_amount_day3 = (sales_qty_day3 ?? 0) × (sales_price_day3 ?? 0)
 - ✅ **MUST**: Username and password authentication
 - ✅ **MUST**: Use your own database (not commercial services)
 - ✅ **MUST NOT**: Use Auth0, Clerk, or similar services
+- ✅ **NEW**: Staff-only registration with invitation codes
+- ✅ **NEW**: Employee lifecycle management (active/suspended/terminated)
+
+#### Staff-Only Registration System:
+- **Invitation Code Validation**: Only valid codes allow registration
+- **Code Management**: Expiration dates, usage limits, department tracking
+- **Employee Security**: Account deactivation when staff leave
+- **Audit Trail**: Track who registered with which code and when
 
 #### Technical Implementation:
-- Custom authentication system
-- Database storage for user credentials
-- Session management
+- Custom authentication system with invitation code validation
+- Database storage for user credentials, invitation codes, and audit logs
+- Session management with user status checking
 - Protected routes for dashboard access
+- Admin interface for invitation code management
+- Employee lifecycle management (deactivation, suspension)
 
 ### 2.3 Excel Import System (CORE REQUIREMENT)
 
@@ -150,17 +160,28 @@ Based on sample file analysis:
 
 ### 6.1 Confirmed Assumptions:
 - Excel file structure matches sample exactly
-- 3-day analysis period is sufficient
-- Single user system (no multi-tenancy mentioned)
+- 3-day analysis period is sufficient (simplified to daySequence 1,2,3)
+- Multi-user system with proper data isolation
 - Real-time updates not required
+- Import batches tracked for debugging and conflict resolution
 
 ### 6.2 Business Logic Clarifications:
 - **Inventory Calculation**: Assume inventory carries forward day-to-day
 - **Zero Values**: Sample data shows zeros - must handle gracefully
 - **Null Values**: Missing Excel cells treated as null, not zero (affects calculations)
-- **Negative Inventory**: Possible if sales > (inventory + procurement)
-- **Price Units**: Assume consistent currency/units
+- **Negative Inventory**: Possible if sales > (inventory + procurement) - allow negative inventory levels
+- **Price Units**: Assume consistent currency/units (use Decimal for precision)
 - **Missing Data**: If critical fields are null, skip calculations but preserve raw data
+- **Calculated Field Consistency**: Procurement/Sales amounts must match qty × price when both values exist
+- **Data Validation**: Products must have valid IDs and names; quantities/prices cannot be negative
+
+### 6.3 Staff Access & Security Logic:
+- **Registration Restriction**: Only company staff can create accounts using invitation codes
+- **Code Distribution**: Store managers receive codes to share with their team members
+- **Employee Lifecycle**: Accounts remain active until manually deactivated by admin
+- **Data Isolation**: Each user sees only their own uploaded data and analysis
+- **Code Security**: Codes expire automatically, have usage limits, and can be emergency-deactivated
+- **Audit Requirements**: Full tracking of who registered when, with which code, and from what location
 
 ### 6.3 UI/UX Assumptions:
 - **Product Selection**: Multi-select interface for comparison
@@ -171,22 +192,38 @@ Based on sample file analysis:
 
 ### 7.1 High-Risk Areas:
 1. **Excel Parsing**: Complex data structure with multiple day columns + null handling
+   - *Mitigation*: Comprehensive validation pipeline with error reporting
 2. **Chart Performance**: 990 products could impact rendering
+   - *Mitigation*: Pagination, lazy loading, and optimized data structures
 3. **Data Calculations**: Inventory math must be accurate with null-safe operations
+   - *Mitigation*: Use Decimal types, business rule constraints, calculation validation
 4. **Authentication Security**: Custom auth implementation
+   - *Mitigation*: bcrypt hashing, JWT tokens, input validation, rate limiting
 5. **Data Completeness**: Missing Excel data could break visualizations
+   - *Mitigation*: Graceful degradation, null-safe calculations, user feedback
 
 ### 7.2 Medium-Risk Areas:
-1. **Deployment Configuration**: Environment setup
-2. **Database Performance**: Queries for chart data with nullable fields
-3. **File Upload Handling**: Large Excel files with data validation
-4. **Cross-browser Compatibility**: Chart rendering
-5. **Import Batch Management**: Tracking and cleanup of failed imports
+1. **Import Conflicts**: Multiple uploads, duplicate data, partial failures
+   - *Mitigation*: Import batch tracking, conflict resolution strategies
+2. **Database Constraints**: Schema violations, data type mismatches
+   - *Mitigation*: Check constraints, proper data types, migration strategies
+3. **File Upload Edge Cases**: Large files, corrupted data, wrong formats
+   - *Mitigation*: File size limits, format validation, timeout handling
+4. **Concurrent Access**: Multiple users, simultaneous imports
+   - *Mitigation*: Database transactions, optimistic locking, user isolation
+5. **Performance Degradation**: Large datasets, complex queries, memory usage
+   - *Mitigation*: Database indexing, query optimization, resource monitoring
+6. **Invitation Code Security**: Code sharing, unauthorized access, code theft
+   - *Mitigation*: Time-limited codes, usage limits, audit logging, emergency deactivation
+7. **Employee Departure**: Former employees retaining access, leaked codes
+   - *Mitigation*: Regular account audits, code rotation, bulk deactivation by code
 
 ## 8. Definition of Done
 
 ### Feature Complete Criteria:
-- [ ] User can register and login successfully
+- [ ] Staff can register with valid invitation codes only
+- [ ] User can login successfully (active accounts only)
+- [ ] Admin can generate and manage invitation codes
 - [ ] User can upload Excel file and see confirmation
 - [ ] Dashboard shows products with 3-curve line charts
 - [ ] User can select multiple products for comparison  
@@ -194,10 +231,19 @@ Based on sample file analysis:
 - [ ] System is deployed and accessible via URL
 - [ ] Documentation explains architecture and decisions
 
+### Security Criteria:
+- [ ] Registration blocked without valid invitation code
+- [ ] Expired/exhausted codes rejected appropriately
+- [ ] Suspended/terminated accounts cannot login
+- [ ] Admin can deactivate codes in emergency situations
+- [ ] Audit trail tracks all registration activities
+- [ ] Rate limiting prevents registration/login abuse
+
 ### Quality Criteria:
 - [ ] No critical bugs in happy path workflow
 - [ ] Reasonable error handling for common issues
 - [ ] Clean, maintainable code structure
 - [ ] Performance acceptable for 990 products dataset
+- [ ] Security measures don't impact user experience significantly
 
 This analysis confirms that the project scope is substantial but achievable in one week with focused execution on the 4 core requirements.

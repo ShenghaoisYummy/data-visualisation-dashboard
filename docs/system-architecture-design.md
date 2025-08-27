@@ -46,24 +46,43 @@
 // prisma/schema.prisma
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  email     String?  @unique
-  password  String   // bcrypt hashed
+  id        String     @id @default(cuid())
+  username  String     @unique @db.VarChar(50)
+  email     String     @unique @db.VarChar(255) // Required for staff verification
+  password  String     @db.VarChar(255)  // bcrypt hashed
+  status    UserStatus @default(ACTIVE)  // Employee lifecycle management
+  
+  // Registration tracking
+  invitationCodeUsed String?    @db.VarChar(50) // Which code was used to register
+  registeredAt       DateTime   @default(now())
+  lastLoginAt        DateTime?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   // Relationships
-  products  Product[]
+  products     Product[]
+  importBatches ImportBatch[]
+  registrationAudit RegistrationAudit[]
   
+  // Constraints
+  @@check([length(trim(username)) >= 3])
+  @@index([status])  // For filtering active users
+  @@index([invitationCodeUsed]) // For audit tracking
   @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE      // Active employee
+  SUSPENDED   // Temporarily disabled
+  TERMINATED  // Former employee - preserve data
 }
 
 model Product {
   id               String   @id @default(cuid())
-  productId        String   // From Excel (e.g., "0000001")
-  productName      String
-  openingInventory Int
+  productId        String   @db.VarChar(50)   // From Excel (e.g., "0000001")
+  productName      String   @db.VarChar(500)
+  openingInventory Int      @db.Integer
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   
@@ -77,28 +96,32 @@ model Product {
   // Indexes
   @@unique([userId, productId]) // Prevent duplicate products per user
   @@index([userId])
+  @@index([userId, productId])  // Composite index for performance
+  
+  // Business constraints
+  @@check([openingInventory >= 0])
+  @@check([length(trim(productName)) >= 1])
   @@map("products")
 }
 
 model DailyData {
   id                 String   @id @default(cuid())
-  date               DateTime // Instead of day number - more flexible
-  daySequence        Int      // 1, 2, 3... for ordering within import batch
+  daySequence        Int      @db.Integer // 1, 2, 3... simplified from Excel
   
-  // Raw Excel Data - nullable to handle missing values
-  procurementQty     Int?     @default(0)
-  procurementPrice   Float?   @default(0)
-  salesQty           Int?     @default(0)
-  salesPrice         Float?   @default(0)
+  // Raw Excel Data - nullable with proper types
+  procurementQty     Int?     @default(0) @db.Integer
+  procurementPrice   Decimal? @default(0) @db.Decimal(12,4) // Better for currency
+  salesQty           Int?     @default(0) @db.Integer
+  salesPrice         Decimal? @default(0) @db.Decimal(12,4) // Better for currency
   
-  // Calculated Fields
-  inventoryLevel     Int?     // Nullable if can't be calculated
-  procurementAmount  Float?   // Handle null prices
-  salesAmount        Float?   // Handle null prices
+  // Calculated Fields with proper precision
+  inventoryLevel     Int?     @db.Integer      // Allow negative (oversold)
+  procurementAmount  Decimal? @db.Decimal(15,4) // Larger for calculated amounts
+  salesAmount        Decimal? @db.Decimal(15,4) // Larger for calculated amounts
   
   // Import metadata
-  importBatchId      String?  // Track which Excel file this came from
-  sourceRow          Int?     // Original Excel row number for debugging
+  importBatchId      String?  @db.VarChar(50)  // Track which Excel file this came from
+  sourceRow          Int?     @db.Integer      // Original Excel row number for debugging
   
   createdAt          DateTime @default(now())
   
@@ -106,10 +129,91 @@ model DailyData {
   productId          String
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   
-  @@unique([productId, date])
+  @@unique([productId, daySequence])
   @@index([productId, daySequence])
   @@index([importBatchId])
+  
+  // Business rule constraints
+  @@check([procurementQty >= 0])
+  @@check([salesQty >= 0])
+  @@check([procurementPrice >= 0])
+  @@check([salesPrice >= 0])
+  @@check([daySequence >= 1 AND daySequence <= 3])
+  
   @@map("daily_data")
+}
+
+// Import tracking for better debugging and conflict resolution
+model ImportBatch {
+  id                 String      @id @default(cuid())
+  userId             String
+  fileName           String      @db.VarChar(255)
+  fileSize           BigInt      // Handle large files
+  totalRows          Int         @db.Integer
+  validRows          Int         @db.Integer
+  skippedRows        Int         @db.Integer
+  status             ImportStatus @default(PROCESSING)
+  errorSummary       Json?       // Store error details as JSON
+  processingTimeMs   Int?        @db.Integer
+  createdAt          DateTime    @default(now())
+  completedAt        DateTime?
+  
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
+  @@map("import_batches")
+}
+
+// Staff-only registration system
+model InvitationCode {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(50)
+  
+  // Usage tracking
+  maxUses     Int      @default(10)    // How many people can use this code
+  currentUses Int      @default(0)     // How many have used it
+  isActive    Boolean  @default(true)  // Can be manually disabled
+  
+  // Expiration and metadata
+  expiresAt   DateTime                 // Automatic expiration
+  
+  // Organization info
+  department  String?  @db.VarChar(100) // "Store 01", "Management", "Inventory"
+  description String?  @db.VarChar(255) // "Monthly codes for Store 01 staff"
+  
+  // Audit trail
+  createdBy   String   @db.VarChar(255) // Admin email who created this
+  createdAt   DateTime @default(now())
+  
+  @@index([code, isActive])    // Fast code validation lookup
+  @@index([expiresAt, isActive]) // Cleanup expired codes
+  @@index([department])        // Organize by department/store
+  @@map("invitation_codes")
+}
+
+// Registration audit log
+model RegistrationAudit {
+  id               String   @id @default(cuid())
+  userId           String
+  invitationCode   String   @db.VarChar(50)
+  userEmail        String   @db.VarChar(255)
+  registeredAt     DateTime @default(now())
+  ipAddress        String?  @db.VarChar(45)  // For security tracking
+  userAgent        String?  @db.VarChar(500) // Browser info
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([invitationCode])  // Track code usage
+  @@index([registeredAt])    // Time-based queries
+  @@map("registration_audit")
+}
+
+enum ImportStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PARTIAL
 }
 ```
 
@@ -271,7 +375,20 @@ graph TB
 interface RegisterRequest {
   username: string;
   password: string;
-  email?: string;
+  email: string;          // Required for staff verification
+  invitationCode: string; // Required for staff-only registration
+}
+
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+  userId?: string;
+  errors?: {
+    username?: string;
+    email?: string;
+    password?: string;
+    invitationCode?: string;
+  };
 }
 
 // POST /api/auth/login  
@@ -282,6 +399,38 @@ interface LoginRequest {
 
 // POST /api/auth/logout
 // No body required
+
+// Admin endpoints for invitation code management
+// POST /api/admin/invitation-codes
+interface CreateInvitationCodeRequest {
+  department?: string;      // "Store 01", "Management"
+  maxUses?: number;        // Default 10
+  expiresAt: string;       // ISO date string
+  description?: string;    // Human readable description
+}
+
+interface CreateInvitationCodeResponse {
+  success: boolean;
+  code?: string;           // Generated invitation code
+  message: string;
+}
+
+// GET /api/admin/invitation-codes
+interface InvitationCodeListResponse {
+  codes: {
+    id: string;
+    code: string;
+    department: string | null;
+    maxUses: number;
+    currentUses: number;
+    isActive: boolean;
+    expiresAt: string;
+    description: string | null;
+  }[];
+}
+
+// PUT /api/admin/invitation-codes/:id/deactivate
+// Immediately disable a code (emergency use)
 ```
 
 ### 4.2 Data Management Endpoints
@@ -491,30 +640,126 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
 
-// JWT token management
+// JWT token management with user status
 import jwt from 'jsonwebtoken';
 
-export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: '24h' });
+export function generateToken(userId: string, userStatus: string): string {
+  return jwt.sign(
+    { userId, status: userStatus }, 
+    process.env.JWT_SECRET!, 
+    { expiresIn: '24h' }
+  );
+}
+
+// Invitation code security
+export class InvitationCodeService {
+  // Generate secure random codes
+  static generateCode(prefix?: string): string {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return prefix ? `${prefix}_${timestamp}${random}` : `STAFF_${timestamp}${random}`;
+  }
+  
+  // Validate code with comprehensive checks
+  static async validateCode(code: string): Promise<{
+    valid: boolean;
+    reason?: string;
+    codeData?: InvitationCode;
+  }> {
+    const inviteCode = await db.invitationCode.findFirst({
+      where: {
+        code,
+        isActive: true,
+        expiresAt: { gt: new Date() },
+        currentUses: { lt: db.invitationCode.fields.maxUses }
+      }
+    });
+    
+    if (!inviteCode) {
+      return { valid: false, reason: 'Invalid, expired, or exhausted invitation code' };
+    }
+    
+    return { valid: true, codeData: inviteCode };
+  }
+  
+  // Track code usage
+  static async useCode(codeId: string, userEmail: string): Promise<void> {
+    await db.invitationCode.update({
+      where: { id: codeId },
+      data: { currentUses: { increment: 1 } }
+    });
+  }
+}
+
+// Employee lifecycle management
+export class EmployeeService {
+  // Deactivate employee account
+  static async deactivateEmployee(userId: string, reason: 'SUSPENDED' | 'TERMINATED'): Promise<void> {
+    await db.user.update({
+      where: { id: userId },
+      data: { 
+        status: reason,
+        updatedAt: new Date()
+      }
+    });
+    
+    // Optionally invalidate active sessions
+    // Implementation depends on session storage method
+  }
+  
+  // Bulk deactivate by invitation code (when employee who distributed code leaves)
+  static async deactivateByInvitationCode(code: string): Promise<number> {
+    const result = await db.user.updateMany({
+      where: { invitationCodeUsed: code },
+      data: { status: 'SUSPENDED' }
+    });
+    
+    return result.count;
+  }
 }
 ```
 
 ### 7.2 API Security
 ```typescript
-// Rate limiting
+// Rate limiting with enhanced protection
 import rateLimit from 'express-rate-limit';
 
-const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 uploads per window
+const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 registration attempts per hour per IP
+  message: 'Too many registration attempts. Please try again later.'
 });
 
-// Input validation
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 login attempts per window
+  message: 'Too many login attempts. Please try again later.'
+});
+
+// Enhanced input validation
 import { z } from 'zod';
 
+const registrationSchema = z.object({
+  username: z.string().min(3).max(50).trim(),
+  password: z.string().min(8).max(100).refine(
+    (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password),
+    { message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' }
+  ),
+  email: z.string().email().max(255).toLowerCase().trim(),
+  invitationCode: z.string().min(6).max(50).trim().toUpperCase()
+});
+
 const loginSchema = z.object({
-  username: z.string().min(3).max(50),
-  password: z.string().min(6).max(100)
+  username: z.string().min(3).max(50).trim(),
+  password: z.string().min(1).max(100)
+});
+
+// Admin invitation code creation validation
+const createInvitationCodeSchema = z.object({
+  department: z.string().max(100).optional(),
+  maxUses: z.number().min(1).max(100).default(10),
+  expiresAt: z.string().datetime(),
+  description: z.string().max(255).optional()
 });
 ```
 

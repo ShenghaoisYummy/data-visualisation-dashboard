@@ -27,10 +27,19 @@ describe('Excel Parser', () => {
   
   test('should handle missing/null values gracefully', () => {
     // Test null quantity, null price, missing cells
+    // Test calculated amounts when qty or price is null
   });
   
   test('should validate Excel structure', () => {
     // Test wrong columns, missing headers
+    // Test invalid product IDs, empty product names
+    // Test negative quantities/prices (should reject)
+  });
+  
+  test('should handle edge case data types', () => {
+    // Test string numbers, floating point precision
+    // Test very large numbers, currency symbols
+    // Test special characters in product names
   });
 });
 ```
@@ -49,10 +58,21 @@ describe('Inventory Calculations', () => {
   
   test('should handle null values in calculations', () => {
     // Null procurement qty/price, null sales qty/price
+    // Test that null qty or price results in null amount (not 0)
   });
   
-  test('should calculate procurement and sales amounts', () => {
-    // (qty ?? 0) × (price ?? 0) with null handling
+  test('should allow negative inventory levels', () => {
+    // Test oversold scenarios where sales > inventory + procurement
+  });
+  
+  test('should use Decimal precision for currency', () => {
+    // Test floating-point precision with currency calculations
+    // Verify Decimal arithmetic prevents precision errors
+  });
+  
+  test('should validate business rule constraints', () => {
+    // Test rejection of negative quantities/prices
+    // Test daySequence bounds (1-3 only)
   });
 });
 ```
@@ -63,20 +83,34 @@ describe('Inventory Calculations', () => {
 ```typescript
 // __tests__/api/auth.test.ts
 describe('Authentication API', () => {
-  test('should register new user with hashed password', () => {
-    // Test user creation, password hashing
+  test('should register new user with valid invitation code', () => {
+    // Test user creation with invitation code validation
+    // Test password hashing, code usage tracking
   });
   
-  test('should login with valid credentials', () => {
-    // Test JWT generation, session creation
+  test('should reject registration with invalid invitation code', () => {
+    // Test expired codes, exhausted codes, non-existent codes
+    // Test deactivated codes, case sensitivity
   });
   
-  test('should reject invalid credentials', () => {
-    // Test wrong username/password combinations
+  test('should login with valid credentials (active users only)', () => {
+    // Test JWT generation with user status
+    // Test session creation for active users
+  });
+  
+  test('should reject login for suspended/terminated users', () => {
+    // Test account status validation during login
+    // Test appropriate error messages
   });
   
   test('should protect authenticated routes', () => {
-    // Test middleware functionality
+    // Test middleware functionality with user status checking
+    // Test route protection for different user statuses
+  });
+  
+  test('should track invitation code usage correctly', () => {
+    // Test code usage increments, max usage enforcement
+    // Test audit trail creation
   });
 });
 ```
@@ -87,16 +121,36 @@ describe('Authentication API', () => {
 ```typescript
 // __tests__/lib/database.test.ts
 describe('Database Operations', () => {
-  test('should create products and daily data', () => {
-    // Test Prisma operations, foreign key relationships
+  test('should create users with invitation code tracking', () => {
+    // Test user creation with invitation code reference
+    // Test registration audit log creation
   });
   
-  test('should handle database constraints', () => {
+  test('should create and manage invitation codes', () => {
+    // Test code creation, expiration, usage tracking
+    // Test department assignment, description storage
+  });
+  
+  test('should enforce database constraints', () => {
     // Test unique constraints, required fields
+    // Test check constraints (non-negative values, string lengths)
+    // Test daySequence bounds (1-3), username length limits
+    // Test invitation code format constraints
   });
   
-  test('should cascade delete operations', () => {
-    // Test user deletion removes products and daily data
+  test('should handle user status transitions', () => {
+    // Test status changes (ACTIVE -> SUSPENDED -> TERMINATED)
+    // Test cascade effects of status changes
+  });
+  
+  test('should track registration audit trail', () => {
+    // Test audit log creation with IP, user agent, timestamp
+    // Test linking audit records to users and codes
+  });
+  
+  test('should handle invitation code lifecycle', () => {
+    // Test code expiration, usage limits, deactivation
+    // Test bulk operations (deactivate by department)
   });
 });
 ```
@@ -109,14 +163,30 @@ describe('Database Operations', () => {
 describe('Upload API', () => {
   test('should process valid Excel file', () => {
     // Test complete flow: upload → parse → store → response
+    // Test ImportBatch creation and status tracking
   });
   
   test('should reject invalid file formats', () => {
     // Test .txt, .pdf, corrupted files
+    // Test files with wrong Excel structure
   });
   
-  test('should handle large files gracefully', () => {
-    // Test file size limits, timeout handling
+  test('should handle data validation edge cases', () => {
+    // Test files with negative values (should reject)
+    // Test files with missing required fields
+    // Test files with invalid data types
+  });
+  
+  test('should handle import conflicts', () => {
+    // Test uploading same file twice
+    // Test partial import failures with rollback
+    // Test concurrent uploads by same user
+  });
+  
+  test('should track import metrics', () => {
+    // Test validRows, skippedRows, errorSummary
+    // Test processing time tracking
+    // Test file size and row count tracking
   });
 });
 ```
@@ -126,7 +196,47 @@ describe('Upload API', () => {
 ### 🟡 TEST AFTER FEATURE COMPLETE (Medium Risk)
 *Test once the feature is working end-to-end*
 
-#### 1. React Component Rendering
+#### 1. Registration & Authentication UI
+```typescript
+// __tests__/components/RegistrationForm.test.tsx
+describe('Registration Form Component', () => {
+  test('should render invitation code input field', () => {
+    render(<RegistrationForm />);
+    expect(screen.getByLabelText(/invitation code/i)).toBeInTheDocument();
+  });
+  
+  test('should show error for invalid invitation code', () => {
+    render(<RegistrationForm />);
+    // Test form submission with invalid code
+    expect(screen.getByText(/invalid invitation code/i)).toBeInTheDocument();
+  });
+  
+  test('should handle registration success', () => {
+    render(<RegistrationForm />);
+    // Test successful registration flow
+  });
+});
+
+// __tests__/components/AdminCodeManagement.test.tsx
+describe('Admin Code Management', () => {
+  test('should display invitation codes list', () => {
+    render(<AdminCodeManagement />);
+    // Test code list rendering, usage statistics
+  });
+  
+  test('should allow code creation', () => {
+    render(<AdminCodeManagement />);
+    // Test new code generation form
+  });
+  
+  test('should allow emergency code deactivation', () => {
+    render(<AdminCodeManagement />);
+    // Test instant code deactivation
+  });
+});
+```
+
+#### 2. React Component Rendering
 ```typescript
 // __tests__/components/ProductChart.test.tsx
 describe('ProductChart Component', () => {
@@ -162,6 +272,25 @@ describe('Login Form', () => {
   
   test('should show validation errors', () => {
     // Test error message display
+  });
+  
+  test('should show account status messages', () => {
+    // Test suspended/terminated account messages
+  });
+});
+
+// __tests__/components/RegistrationForm.test.tsx
+describe('Registration Form Validation', () => {
+  test('should validate invitation code format', () => {
+    // Test code format requirements
+  });
+  
+  test('should enforce password complexity', () => {
+    // Test uppercase, lowercase, number requirements
+  });
+  
+  test('should validate email format', () => {
+    // Test email format validation
   });
 });
 ```
@@ -241,9 +370,66 @@ describe('Performance Tests', () => {
 ## Test Data Strategy
 
 ### Test Fixtures
-Create reusable test data that mirrors real Excel structure:
+Create reusable test data with invitation codes and user scenarios:
 
 ```typescript
+// __tests__/fixtures/auth-data.ts
+export const validInvitationCodes = [
+  {
+    code: "STORE01_2024",
+    department: "Store 01",
+    maxUses: 10,
+    currentUses: 3,
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    isActive: true
+  },
+  {
+    code: "MANAGER_2024",
+    department: "Management",
+    maxUses: 5,
+    currentUses: 1,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    isActive: true
+  }
+];
+
+export const invalidInvitationCodes = [
+  {
+    code: "EXPIRED_CODE",
+    expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Expired yesterday
+    isActive: true
+  },
+  {
+    code: "EXHAUSTED_CODE",
+    maxUses: 5,
+    currentUses: 5, // Fully used
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    isActive: true
+  },
+  {
+    code: "DEACTIVATED_CODE",
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    isActive: false // Manually deactivated
+  }
+];
+
+export const testUsers = [
+  {
+    username: "store01_manager",
+    email: "manager@grocery.com",
+    password: "SecurePass123",
+    status: "ACTIVE",
+    invitationCodeUsed: "STORE01_2024"
+  },
+  {
+    username: "former_employee",
+    email: "former@grocery.com",
+    password: "OldPass123",
+    status: "TERMINATED",
+    invitationCodeUsed: "OLD_CODE_2023"
+  }
+];
+
 // __tests__/fixtures/excel-data.ts
 export const validExcelData = [
   {
@@ -256,10 +442,20 @@ export const validExcelData = [
   }
 ];
 
-export const invalidExcelData = [
-  // Missing required fields
-  // Null values in various combinations
-  // Edge cases
+export const edgeCaseExcelData = [
+  // Null/empty values in various combinations
+  { ID: "0000002", "Product Name": "Product B", "Opening Inventory": 50,
+    "Procurement Qty (Day 1)": null, "Procurement Price (Day 1)": 15.75 },
+  
+  // Special characters and unicode
+  { ID: "0000003", "Product Name": "CAFÉ AU LAIT 测试", "Opening Inventory": 25 },
+  
+  // Large numbers and precision
+  { ID: "0000004", "Product Name": "High Value Item", "Opening Inventory": 999999,
+    "Procurement Price (Day 1)": 1234.5678 },
+  
+  // Zero values
+  { ID: "0000005", "Product Name": "Zero Stock Item", "Opening Inventory": 0 }
 ];
 ```
 
@@ -267,10 +463,40 @@ export const invalidExcelData = [
 ```typescript
 // __tests__/setup/database.ts
 beforeEach(async () => {
-  await db.user.deleteMany();
-  await db.product.deleteMany();
+  await db.registrationAudit.deleteMany();
+  await db.importBatch.deleteMany();
   await db.dailyData.deleteMany();
+  await db.product.deleteMany();
+  await db.invitationCode.deleteMany();
+  await db.user.deleteMany();
 });
+
+// Test constraint violations
+const testConstraintViolations = async () => {
+  // Test check constraints
+  await expect(db.product.create({
+    data: { productId: "TEST", productName: "", openingInventory: -5, userId: "test" }
+  })).rejects.toThrow(); // Should fail due to constraints
+};
+
+// Setup invitation codes for testing
+const setupTestInvitationCodes = async () => {
+  await db.invitationCode.createMany({
+    data: validInvitationCodes
+  });
+};
+
+// Setup test users with different statuses
+const setupTestUsers = async () => {
+  for (const userData of testUsers) {
+    await db.user.create({
+      data: {
+        ...userData,
+        password: await hashPassword(userData.password)
+      }
+    });
+  }
+};
 ```
 
 ## Coverage Targets
@@ -328,9 +554,40 @@ jobs:
 
 If time runs short, prioritize in this order:
 1. **Authentication tests** - Security cannot be compromised
-2. **Excel parsing tests** - Core functionality must work
-3. **Calculation tests** - Business logic must be accurate
-4. **API tests** - Integration points must be reliable
-5. **UI tests** - Visual components are lower priority
+2. **Excel parsing tests** - Core functionality must work, including edge case handling
+3. **Calculation tests** - Business logic must be accurate, especially null-safe operations
+4. **Database constraint tests** - Data integrity must be maintained
+5. **Import conflict tests** - Multi-user scenarios must work correctly
+6. **API tests** - Integration points must be reliable
+7. **UI tests** - Visual components are lower priority
 
-This strategy ensures that even with time constraints, the most critical and error-prone parts of the application are thoroughly tested, while allowing flexibility for less critical components.
+## Edge Case Testing Checklist
+
+### Critical Edge Cases to Validate:
+- [ ] Null/empty values in Excel data don't break calculations
+- [ ] Negative inventory levels are allowed (oversold scenarios)
+- [ ] Decimal precision maintained in currency calculations
+- [ ] Database constraints prevent invalid data entry
+- [ ] Import batch tracking works for debugging
+- [ ] Duplicate uploads handled gracefully
+- [ ] Large file processing doesn't timeout
+- [ ] Special characters in product names preserved
+- [ ] User data isolation maintained across imports
+
+### Security & Access Control Edge Cases:
+- [ ] Registration blocked without valid invitation code
+- [ ] Expired invitation codes rejected appropriately
+- [ ] Exhausted invitation codes (maxUses reached) rejected
+- [ ] Deactivated invitation codes rejected immediately
+- [ ] Suspended/terminated users cannot login
+- [ ] JWT tokens include user status for route protection
+- [ ] Admin can deactivate codes in emergency situations
+- [ ] Rate limiting prevents registration/login abuse
+- [ ] Audit trail captures all registration attempts
+- [ ] Case-insensitive invitation code validation
+- [ ] Code usage tracking increments correctly
+- [ ] Bulk user deactivation by invitation code works
+- [ ] Password complexity requirements enforced
+- [ ] Email format validation works correctly
+
+This enhanced strategy ensures comprehensive testing of edge cases while maintaining focus on the most critical system components.
