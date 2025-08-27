@@ -81,19 +81,24 @@ model Product {
 }
 
 model DailyData {
-  id                 String  @id @default(cuid())
-  day                Int     // 1, 2, or 3
+  id                 String   @id @default(cuid())
+  date               DateTime // Instead of day number - more flexible
+  daySequence        Int      // 1, 2, 3... for ordering within import batch
   
-  // Raw Excel Data
-  procurementQty     Int     @default(0)
-  procurementPrice   Float   @default(0)
-  salesQty           Int     @default(0)
-  salesPrice         Float   @default(0)
+  // Raw Excel Data - nullable to handle missing values
+  procurementQty     Int?     @default(0)
+  procurementPrice   Float?   @default(0)
+  salesQty           Int?     @default(0)
+  salesPrice         Float?   @default(0)
   
-  // Calculated Fields (for performance)
-  inventoryLevel     Int     // Calculated running inventory
-  procurementAmount  Float   // procurementQty * procurementPrice
-  salesAmount        Float   // salesQty * salesPrice
+  // Calculated Fields
+  inventoryLevel     Int?     // Nullable if can't be calculated
+  procurementAmount  Float?   // Handle null prices
+  salesAmount        Float?   // Handle null prices
+  
+  // Import metadata
+  importBatchId      String?  // Track which Excel file this came from
+  sourceRow          Int?     // Original Excel row number for debugging
   
   createdAt          DateTime @default(now())
   
@@ -101,9 +106,9 @@ model DailyData {
   productId          String
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   
-  // Constraints
-  @@unique([productId, day]) // One record per product per day
-  @@index([productId])
+  @@unique([productId, date])
+  @@index([productId, daySequence])
+  @@index([importBatchId])
   @@map("daily_data")
 }
 ```

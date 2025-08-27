@@ -42,20 +42,24 @@
 
 #### Critical Calculations Needed:
 ```javascript
+// Null-safe calculations (handle missing Excel data)
 // Day 1
-inventory_day1 = opening_inventory + procurement_qty_day1 - sales_qty_day1
-procurement_amount_day1 = procurement_qty_day1 × procurement_price_day1  
-sales_amount_day1 = sales_qty_day1 × sales_price_day1
+inventory_day1 = opening_inventory + (procurement_qty_day1 ?? 0) - (sales_qty_day1 ?? 0)
+procurement_amount_day1 = (procurement_qty_day1 ?? 0) × (procurement_price_day1 ?? 0)  
+sales_amount_day1 = (sales_qty_day1 ?? 0) × (sales_price_day1 ?? 0)
 
 // Day 2  
-inventory_day2 = inventory_day1 + procurement_qty_day2 - sales_qty_day2
-procurement_amount_day2 = procurement_qty_day2 × procurement_price_day2
-sales_amount_day2 = sales_qty_day2 × sales_price_day2
+inventory_day2 = inventory_day1 + (procurement_qty_day2 ?? 0) - (sales_qty_day2 ?? 0)
+procurement_amount_day2 = (procurement_qty_day2 ?? 0) × (procurement_price_day2 ?? 0)
+sales_amount_day2 = (sales_qty_day2 ?? 0) × (sales_price_day2 ?? 0)
 
 // Day 3
-inventory_day3 = inventory_day2 + procurement_qty_day3 - sales_qty_day3  
-procurement_amount_day3 = procurement_qty_day3 × procurement_price_day3
-sales_amount_day3 = sales_qty_day3 × sales_price_day3
+inventory_day3 = inventory_day2 + (procurement_qty_day3 ?? 0) - (sales_qty_day3 ?? 0)  
+procurement_amount_day3 = (procurement_qty_day3 ?? 0) × (procurement_price_day3 ?? 0)
+sales_amount_day3 = (sales_qty_day3 ?? 0) × (sales_price_day3 ?? 0)
+
+// Note: If both qty and price are null, amount should be null (not 0)
+// Special handling: amount = (qty != null && price != null) ? qty × price : null
 ```
 
 ### 2.2 User Authentication System (CORE REQUIREMENT)
@@ -83,9 +87,10 @@ sales_amount_day3 = sales_qty_day3 × sales_price_day3
 
 #### Expected Data Processing:
 - Parse Excel with exact column structure from sample
-- Validate data integrity
-- Transform data for storage
-- Handle parsing errors gracefully
+- Validate data integrity with null value detection
+- Transform data for storage with import batch tracking
+- Handle parsing errors and missing data gracefully
+- Report data completeness metrics to user
 
 ### 2.4 Deployment (CORE REQUIREMENT)
 
@@ -152,8 +157,10 @@ Based on sample file analysis:
 ### 6.2 Business Logic Clarifications:
 - **Inventory Calculation**: Assume inventory carries forward day-to-day
 - **Zero Values**: Sample data shows zeros - must handle gracefully
+- **Null Values**: Missing Excel cells treated as null, not zero (affects calculations)
 - **Negative Inventory**: Possible if sales > (inventory + procurement)
 - **Price Units**: Assume consistent currency/units
+- **Missing Data**: If critical fields are null, skip calculations but preserve raw data
 
 ### 6.3 UI/UX Assumptions:
 - **Product Selection**: Multi-select interface for comparison
@@ -163,16 +170,18 @@ Based on sample file analysis:
 ## 7. Risk Areas & Mitigation
 
 ### 7.1 High-Risk Areas:
-1. **Excel Parsing**: Complex data structure with multiple day columns
+1. **Excel Parsing**: Complex data structure with multiple day columns + null handling
 2. **Chart Performance**: 990 products could impact rendering
-3. **Data Calculations**: Inventory math must be accurate
+3. **Data Calculations**: Inventory math must be accurate with null-safe operations
 4. **Authentication Security**: Custom auth implementation
+5. **Data Completeness**: Missing Excel data could break visualizations
 
 ### 7.2 Medium-Risk Areas:
 1. **Deployment Configuration**: Environment setup
-2. **Database Performance**: Queries for chart data
-3. **File Upload Handling**: Large Excel files
+2. **Database Performance**: Queries for chart data with nullable fields
+3. **File Upload Handling**: Large Excel files with data validation
 4. **Cross-browser Compatibility**: Chart rendering
+5. **Import Batch Management**: Tracking and cleanup of failed imports
 
 ## 8. Definition of Done
 
