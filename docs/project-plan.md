@@ -42,109 +42,261 @@ Based on the sample Excel file analysis:
 
 ### Tech Stack Selection:
 
-- **Frontend**: Next.js 14 (App Router) + React + TypeScript
-- **Styling**: Tailwind CSS
+- **Frontend**: Next.js 15 (App Router) + React + TypeScript
+- **Styling**: Tailwind CSS v4
 - **Charts**: Recharts (React-friendly, good performance)
 - **Backend**: Next.js API Routes
 - **Database**: PostgreSQL (production-ready)
-- **ORM**: Prisma (excellent TypeScript support)
-- **Authentication**: NextAuth.js with custom credentials
+- **ORM**: Prisma with custom client output path (`src/generated/prisma`)
+- **Authentication**: Custom JWT-based authentication with invitation code system
+- **Testing**: Jest + React Testing Library + Playwright (E2E)
+- **Validation**: Zod schemas for type-safe validation
 - **Deployment**: Vercel (seamless Next.js integration)
 - **File Processing**: SheetJS (xlsx library)
+- **Security**: bcrypt, rate limiting, input validation
 
-### Database Schema:
+### Enhanced Database Schema:
 
 ```sql
--- Users table
+-- Users table with staff lifecycle management
 Users {
   id: String (Primary Key)
-  username: String (Unique)
-  password: String (Hashed)
+  username: String (Unique, 3-50 chars)
+  email: String (Unique, required for staff verification)
+  password: String (Hashed with bcrypt)
+  status: UserStatus (ACTIVE/SUSPENDED/TERMINATED)
+  invitationCodeUsed: String? (Audit trail)
+  registeredAt: DateTime
+  lastLoginAt: DateTime?
   createdAt: DateTime
+  updatedAt: DateTime
+}
+
+-- Staff-only registration system
+InvitationCodes {
+  id: String (Primary Key)
+  code: String (Unique, auto-generated)
+  maxUses: Int (Default 10)
+  currentUses: Int (Default 0)
+  isActive: Boolean (Default true)
+  expiresAt: DateTime (Time-limited)
+  department: String? (Store/Department organization)
+  description: String? (Human-readable purpose)
+  createdBy: String (Admin email)
+  createdAt: DateTime
+}
+
+-- Complete registration audit trail
+RegistrationAudit {
+  id: String (Primary Key)
+  userId: String (Foreign Key)
+  invitationCode: String
+  userEmail: String
+  registeredAt: DateTime
+  ipAddress: String? (Security tracking)
+  userAgent: String? (Browser info)
 }
 
 -- Products table
 Products {
   id: String (Primary Key)
-  productId: String (from Excel)
-  productName: String
-  openingInventory: Int
-  userId: String (Foreign Key)
+  productId: String (from Excel, e.g. "0000001")
+  productName: String (1-500 chars)
+  openingInventory: Int (>=0 constraint)
+  userId: String (Foreign Key - data isolation)
   createdAt: DateTime
+  updatedAt: DateTime
 }
 
--- Daily data table
-ProductDailyData {
+-- Daily data with Decimal precision for currency
+DailyData {
   id: String (Primary Key)
   productId: String (Foreign Key)
-  date: DateTime (Actual date instead of day number)
-  daySequence: Int (1, 2, 3 for ordering within batch)
-  procurementQty: Int? (Nullable - handle missing values)
-  procurementPrice: Float? (Nullable - handle missing values)
-  salesQty: Int? (Nullable - handle missing values)
-  salesPrice: Float? (Nullable - handle missing values)
-  inventoryLevel: Int? (Nullable if can't be calculated)
-  procurementAmount: Float? (Nullable - handle null prices)
-  salesAmount: Float? (Nullable - handle null prices)
+  daySequence: Int (1-3 constraint)
+  procurementQty: Int? (Nullable, >=0 if not null)
+  procurementPrice: Decimal? (Nullable, >=0 if not null, 12,4 precision)
+  salesQty: Int? (Nullable, >=0 if not null)
+  salesPrice: Decimal? (Nullable, >=0 if not null, 12,4 precision)
+  inventoryLevel: Int? (Allow negative - oversold scenarios)
+  procurementAmount: Decimal? (15,4 precision for calculations)
+  salesAmount: Decimal? (15,4 precision for calculations)
   importBatchId: String? (Track which Excel file)
   sourceRow: Int? (Original Excel row for debugging)
   createdAt: DateTime
+}
+
+-- Import batch tracking for debugging
+ImportBatch {
+  id: String (Primary Key)
+  userId: String (Foreign Key)
+  fileName: String
+  fileSize: BigInt
+  totalRows: Int
+  validRows: Int
+  skippedRows: Int
+  status: ImportStatus (PROCESSING/COMPLETED/FAILED/PARTIAL)
+  errorSummary: Json? (Detailed error information)
+  processingTimeMs: Int?
+  createdAt: DateTime
+  completedAt: DateTime?
 }
 ```
 
 ### System Flow:
 
-1. **Authentication Flow**: Login → Session → Dashboard Access
-2. **Data Import Flow**: Upload Excel → Parse → Validate → Store → Confirmation
-3. **Visualization Flow**: Select Products → Fetch Data → Generate Charts → Interactive Display
+1. **Staff Registration Flow**: Invitation Code → Validate Code → Create Account → Audit Trail
+2. **Authentication Flow**: Login → User Status Check → JWT Session → Dashboard Access
+3. **Data Import Flow**: Upload Excel → Parse → Null-Safe Validate → Batch Store → Import Tracking → Confirmation
+4. **Visualization Flow**: Select Products → Fetch User Data → Calculate Chart Data → Generate 3-Curve Charts → Interactive Display
+5. **Admin Management Flow**: Generate Codes → Track Usage → Emergency Deactivation → Employee Lifecycle
 
 ## 3. Implementation Plan
 
 ### Phase 1: Project Setup & Authentication (Day 1-2)
 
-- [ ] Initialize Next.js project with TypeScript
-- [ ] Set up Tailwind CSS
-- [ ] Configure Prisma with PostgreSQL
-- [ ] Create database schema
-- [ ] Implement user registration/login system
-- [ ] Set up session management
-- [ ] Create protected route middleware
+**Development Tasks:**
+- [ ] Initialize Next.js 15 project with TypeScript and App Router
+- [ ] Set up Tailwind CSS v4
+- [ ] Configure Prisma with PostgreSQL and custom client output path
+- [ ] Create enhanced database schema with staff-only registration system
+  - [ ] User table with status management (ACTIVE/SUSPENDED/TERMINATED)
+  - [ ] InvitationCode table with usage tracking and expiration
+  - [ ] RegistrationAudit table for complete audit trail
+- [ ] Implement staff-only registration system with invitation code validation
+- [ ] Implement login system with user status checking
+- [ ] Set up JWT-based session management with user status
+- [ ] Create protected route middleware with status validation
+- [ ] Build admin interface for invitation code management
+
+**Testing Tasks (TDD - During Development):**
+- [ ] Authentication logic unit tests (login/register/session) - **Unit Testing**
+- [ ] Database schema and operations unit tests - **Unit Testing**
+- [ ] Password hashing and JWT generation unit tests - **Unit Testing**
+- [ ] Invitation code validation and usage tracking unit tests - **Unit Testing**
+- [ ] User status management unit tests - **Unit Testing**
+- [ ] Registration audit trail unit tests - **Unit Testing**
+- [ ] User registration/login system integration tests - **Integration Testing**
+- [ ] Protected route middleware unit tests - **Unit Testing**
+
+**Testing Tasks (After Feature Complete):**
+- [ ] Registration form component tests with invitation code input - **Component Testing**
+- [ ] Admin code management interface tests - **Component Testing**
+- [ ] Login form component tests - **Component Testing**
+- [ ] Route protection middleware UI testing - **Component Testing**
 
 ### Phase 2: Excel Import System (Day 2-3)
 
-- [ ] Create file upload component
-- [ ] Build Excel parsing API endpoint
-- [ ] Implement data validation logic with null handling
+**Development Tasks:**
+- [ ] Create file upload component with validation
+- [ ] Build Excel parsing API endpoint with SheetJS
+- [ ] Implement comprehensive data validation logic with null-safe handling
+  - [ ] Validate Excel structure and required columns
+  - [ ] Handle missing/null values gracefully in calculations
+  - [ ] Enforce business rule constraints (non-negative values)
 - [ ] Create database insertion logic with import batch tracking
-- [ ] Add error handling and user feedback
+  - [ ] ImportBatch model for debugging and conflict resolution
+  - [ ] Transform wide Excel format to normalized DailyData records
+  - [ ] Use Decimal types for currency precision
+- [ ] Implement null-safe inventory calculations
+  - [ ] Handle null procurement qty/price combinations
+  - [ ] Handle null sales qty/price combinations
+  - [ ] Allow negative inventory levels (oversold scenarios)
+- [ ] Add comprehensive error handling and user feedback
 - [ ] Implement missing data detection and reporting
 - [ ] Test with sample data file including edge cases
 
+**Testing Tasks (TDD - During Development):**
+- [ ] Excel parsing with null handling unit tests - **Unit Testing**
+- [ ] Data validation logic with null handling unit tests - **Unit Testing**
+- [ ] Inventory calculation formulas unit tests (with Decimal precision) - **Unit Testing**
+- [ ] Database insertion logic with import batch tracking unit tests - **Unit Testing**
+- [ ] Missing data detection and reporting unit tests - **Unit Testing**
+- [ ] Business rule constraint validation unit tests - **Unit Testing**
+
+**Testing Tasks (After Feature Complete):**
+- [ ] File upload component tests - **Component Testing**
+- [ ] Excel parsing API endpoint tests - **Integration Testing**
+- [ ] Upload API error handling and user feedback tests - **Integration Testing**
+- [ ] Edge case testing with sample data (990 products) - **Integration Testing**
+- [ ] Import conflict and duplicate handling tests - **Integration Testing**
+
 ### Phase 3: Data Visualization Dashboard (Day 3-5)
 
-- [ ] Design dashboard layout
-- [ ] Create product selection interface
-- [ ] Implement data fetching API
-- [ ] Build line charts with Recharts
-- [ ] Add multi-product comparison
-- [ ] Implement responsive design
-- [ ] Add loading states and error handling
+**Development Tasks:**
+- [ ] Design responsive dashboard layout
+- [ ] Create product selection interface with multi-select capability
+- [ ] Implement data fetching API with user data isolation
+- [ ] Build line charts with Recharts showing 3 curves per product:
+  - [ ] Inventory levels over time
+  - [ ] Procurement amounts over time
+  - [ ] Sales amounts over time
+- [ ] Add multi-product comparison functionality
+- [ ] Implement chart data aggregation and optimization for 990+ products
+- [ ] Add responsive design with mobile considerations
+- [ ] Implement loading states and comprehensive error handling
+- [ ] Add chart performance optimizations (pagination, lazy loading)
+
+**Testing Tasks (TDD - During Development):**
+- [ ] Data fetching API unit tests with user isolation - **Unit Testing**
+- [ ] Chart data aggregation and calculations unit tests - **Unit Testing**
+- [ ] Product selection logic unit tests - **Unit Testing**
+- [ ] Line charts with Recharts implementation unit tests - **Unit Testing**
+- [ ] Multi-product comparison logic unit tests - **Unit Testing**
+- [ ] Chart data transformation helpers unit tests - **Unit Testing**
+
+**Testing Tasks (After Feature Complete):**
+- [ ] Dashboard layout component tests - **Component Testing**
+- [ ] Product selection interface component tests - **Component Testing**
+- [ ] Chart component rendering tests - **Component Testing**
+- [ ] Responsive design testing across devices - **Component Testing**
+- [ ] Loading states and error handling component tests - **Component Testing**
+- [ ] Multi-product comparison UI tests - **Component Testing**
 
 ### Phase 4: Testing & Polish (Day 5-6)
 
-- [ ] End-to-end testing
-- [ ] Performance optimization
-- [ ] UI/UX refinements
+**Development Tasks:**
+- [ ] End-to-end testing of complete user workflows
+- [ ] Performance optimization for large datasets (990+ products)
+- [ ] UI/UX refinements based on testing feedback
 - [ ] Data validation improvements
 - [ ] Error handling enhancements
+- [ ] Security review and rate limiting implementation
+- [ ] Code coverage analysis and improvement
+
+**Testing Tasks (During Development):**
+- [ ] Complete user workflow end-to-end tests - **E2E Testing**
+- [ ] Performance testing with full dataset (990 products) - **Performance Testing**
+- [ ] Data validation improvements testing - **Unit Testing**
+- [ ] Error handling enhancements testing - **Integration Testing**
+- [ ] Security testing (rate limiting, input validation) - **Integration Testing**
+
+**Testing Tasks (After Feature Complete):**
+- [ ] UI/UX refinements testing - **Component Testing**
+- [ ] Complete user workflow validation - **E2E Testing**
+- [ ] Cross-browser compatibility testing - **E2E Testing**
+- [ ] Mobile responsiveness testing - **E2E Testing**
 
 ### Phase 5: Deployment & Documentation (Day 6-7)
 
-- [ ] Deploy to Vercel
-- [ ] Set up production database
-- [ ] Environment configuration
-- [ ] Create documentation
-- [ ] Final testing on production
+**Development Tasks:**
+- [ ] Deploy to Vercel with optimized build configuration
+- [ ] Set up production PostgreSQL database
+- [ ] Configure environment variables and secrets management
+- [ ] Set up database migrations for production
+- [ ] Create comprehensive documentation
+  - [ ] Setup and installation instructions
+  - [ ] API documentation
+  - [ ] Staff registration and invitation code management guide
+  - [ ] System architecture documentation
+- [ ] Final testing on production environment
+
+**Testing Tasks (After Project Complete):**
+- [ ] Production deployment testing - **E2E Testing**
+- [ ] Production database setup validation - **Integration Testing**
+- [ ] Environment configuration testing - **Integration Testing**
+- [ ] Final testing on production environment - **E2E Testing**
+- [ ] Documentation accuracy validation - **Manual Testing**
+- [ ] Production performance monitoring - **Performance Testing**
 
 ## 4. Key Technical Decisions
 
@@ -159,36 +311,51 @@ ProductDailyData {
 
 ### Authentication Approach:
 
-- Custom credential-based authentication
-- Bcrypt for password hashing
-- JWT tokens for session management
-- Middleware for protected routes
+- **Staff-Only Registration**: Invitation code system with usage tracking and expiration
+- **Custom JWT Authentication**: No NextAuth.js - fully custom implementation
+- **Security Features**: bcrypt password hashing, rate limiting, input validation
+- **User Status Management**: ACTIVE/SUSPENDED/TERMINATED lifecycle
+- **Session Management**: JWT tokens with user status validation
+- **Route Protection**: Middleware checking both authentication and user status
+- **Audit Trail**: Complete registration and access logging
+- **Admin Controls**: Code generation, usage monitoring, emergency deactivation
 
 ### File Processing Strategy:
 
-- Client-side file selection
-- Server-side processing with validation
-- Batch database insertion
-- Progress feedback to user
+- **Client-side**: File selection with format validation
+- **Server-side**: SheetJS parsing with comprehensive validation
+- **Null-Safe Processing**: Handle missing Excel cells gracefully
+- **Batch Database Insertion**: ImportBatch tracking with transaction rollback
+- **Data Transformation**: Wide Excel format → normalized DailyData records
+- **Currency Precision**: Decimal types for accurate financial calculations
+- **Error Reporting**: Detailed validation feedback with row-level errors
+- **Progress Feedback**: Real-time processing status to user
 
 ## 5. Assumptions & Limitations
 
 ### Assumptions:
 
-- Excel files follow the exact format provided in sample
-- Maximum 3 days of data per import
-- Single currency for all prices
-- Users manage their own product data (no sharing between users)
-- Excel files may contain missing/empty cells which will be handled as null values
-- Import batches will be tracked for data lineage and debugging
+- Excel files follow the exact format provided in sample (990 products, 3 days)
+- Staff-only access with invitation code distribution via store managers
+- Maximum 3 days of data per import (daySequence 1-3)
+- Single currency for all prices with Decimal precision for calculations
+- Complete user data isolation (each user sees only their own products)
+- Excel files may contain missing/empty cells → handled as null (not zero)
+- Import batches tracked for debugging, conflict resolution, and audit
+- Negative inventory levels allowed (oversold scenarios)
+- Admin users can generate and manage invitation codes
+- Employee lifecycle managed through user status changes
 
 ### Limitations:
 
-- Fixed 3-day analysis period
-- No real-time data updates
-- Basic authentication (no password reset, email verification)
-- No data export functionality
-- Limited to Excel file imports only
+- Fixed 3-day analysis period (not configurable)
+- No real-time data updates (batch import only)
+- Custom authentication system (no OAuth, password reset, email verification)
+- No data export functionality (visualization only)
+- Limited to Excel file imports (.xlsx format only)
+- No data sharing between users (strict user isolation)
+- Manual invitation code distribution (no automated email system)
+- Single tenant architecture (no multi-organization support)
 
 ## 6. Risk Mitigation
 
@@ -209,10 +376,15 @@ ProductDailyData {
 
 ### Technical Requirements:
 
-- [ ] All 4 core requirements implemented
-- [ ] Working deployed application
-- [ ] Clean, maintainable code
-- [ ] Proper error handling
+- [ ] All 4 core requirements implemented with enhanced features
+- [ ] Staff-only registration system with invitation codes working
+- [ ] Custom JWT authentication with user status management
+- [ ] Excel import with null-safe calculations and Decimal precision
+- [ ] 3-curve line charts with multi-product comparison
+- [ ] Working deployed application with production database
+- [ ] Clean, maintainable code with comprehensive testing
+- [ ] Proper error handling and security measures
+- [ ] Admin interface for invitation code management
 
 ### User Experience:
 

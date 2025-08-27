@@ -326,46 +326,67 @@ describe('Performance Tests', () => {
 
 ## Timeline Integration
 
-### Days 1-2: Setup & Authentication
+### Phase 1: Project Setup & Authentication (Day 1-2)
 **Test During Development:**
-- [ ] Authentication logic (login/register/session)
-- [ ] Database schema and operations
-- [ ] Password hashing and JWT generation
+- [ ] Authentication logic (login/register/session) - **Unit Testing**
+- [ ] Database schema and operations - **Unit Testing**
+- [ ] Password hashing and JWT generation - **Unit Testing**
+- [ ] User registration/login system - **Integration Testing**
+- [ ] Session management - **Unit Testing**
+- [ ] Protected route middleware - **Unit Testing**
 
 **After Feature Complete:**
-- [ ] Login/Register form components
-- [ ] Route protection middleware
+- [ ] Login/Register form components - **Component Testing**
+- [ ] Route protection middleware UI testing - **Component Testing**
 
-### Days 2-3: Excel Import System
+### Phase 2: Excel Import System (Day 2-3)
 **Test During Development:**
-- [ ] Excel parsing with null handling
-- [ ] Data validation and error detection
-- [ ] Inventory calculation formulas
-- [ ] Database insertion with batch tracking
+- [ ] Excel parsing with null handling - **Unit Testing**
+- [ ] Data validation logic with null handling - **Unit Testing**
+- [ ] Inventory calculation formulas - **Unit Testing**
+- [ ] Database insertion logic with import batch tracking - **Unit Testing**
+- [ ] Missing data detection and reporting - **Unit Testing**
 
 **After Feature Complete:**
-- [ ] File upload component
-- [ ] Upload API error handling
-- [ ] User feedback and progress indicators
+- [ ] File upload component - **Component Testing**
+- [ ] Excel parsing API endpoint - **Integration Testing**
+- [ ] Upload API error handling and user feedback - **Integration Testing**
+- [ ] Edge case testing with sample data - **Integration Testing**
 
-### Days 3-5: Dashboard & Visualization
+### Phase 3: Data Visualization Dashboard (Day 3-5)
 **Test During Development:**
-- [ ] Chart data aggregation API
-- [ ] Product selection logic
-- [ ] Data fetching operations
+- [ ] Data fetching API - **Unit Testing**
+- [ ] Chart data aggregation and calculations - **Unit Testing**
+- [ ] Product selection logic - **Unit Testing**
+- [ ] Line charts with Recharts implementation - **Unit Testing**
+- [ ] Multi-product comparison logic - **Unit Testing**
 
 **After Feature Complete:**
-- [ ] Chart component rendering
-- [ ] Product selector component
-- [ ] Dashboard layout and responsive design
-- [ ] Multi-product comparison
+- [ ] Dashboard layout design - **Component Testing**
+- [ ] Product selection interface - **Component Testing**
+- [ ] Chart component rendering - **Component Testing**
+- [ ] Responsive design testing - **Component Testing**
+- [ ] Loading states and error handling - **Component Testing**
 
-### Days 5-7: Polish & Deploy
+### Phase 4: Testing & Polish (Day 5-6)
+**Test During Development:**
+- [ ] End-to-end testing - **E2E Testing**
+- [ ] Performance optimization validation - **Performance Testing**
+- [ ] Data validation improvements testing - **Unit Testing**
+- [ ] Error handling enhancements - **Integration Testing**
+
+**After Feature Complete:**
+- [ ] UI/UX refinements testing - **Component Testing**
+- [ ] Complete user workflow validation - **E2E Testing**
+- [ ] Cross-browser compatibility - **E2E Testing**
+
+### Phase 5: Deployment & Documentation (Day 6-7)
 **Test After Project Complete:**
-- [ ] Integration tests for complete workflows
-- [ ] Performance tests with full dataset
-- [ ] Deployment pipeline testing
-- [ ] Browser compatibility validation
+- [ ] Production deployment testing - **E2E Testing**
+- [ ] Production database setup validation - **Integration Testing**
+- [ ] Environment configuration testing - **Integration Testing**
+- [ ] Final testing on production environment - **E2E Testing**
+- [ ] Documentation accuracy validation - **Manual Testing**
 
 ## Test Data Strategy
 
