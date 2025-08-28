@@ -29,7 +29,7 @@ const customJestConfig = {
   ],
   
   // Module name mapping for absolute imports
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   
@@ -43,9 +43,9 @@ const customJestConfig = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   
-  // Global setup and teardown
-  globalSetup: '<rootDir>/__tests__/setup/globalSetup.js',
-  globalTeardown: '<rootDir>/__tests__/setup/globalTeardown.js',
+  // Global setup and teardown (disabled for now)
+  // globalSetup: '<rootDir>/__tests__/setup/globalSetup.js',
+  // globalTeardown: '<rootDir>/__tests__/setup/globalTeardown.js',
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

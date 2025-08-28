@@ -5,8 +5,8 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-purposes-only';
 process.env.DATABASE_URL = 'file:./test.db';
 
-// Mock fetch for API testing
-global.fetch = require('jest-fetch-mock');
+// Mock fetch for API testing (disabled for now)
+// global.fetch = require('jest-fetch-mock');
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
