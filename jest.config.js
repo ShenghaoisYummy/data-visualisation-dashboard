@@ -11,7 +11,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
   // Test environment
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'node',
   
   // Test patterns
   testMatch: [
@@ -20,6 +20,11 @@ const customJestConfig = {
     '<rootDir>/src/**/?(*.)(test|spec).(js|jsx|ts|tsx)'
   ],
   
+  // Module name mapping for absolute imports
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  
   // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.(js|jsx|ts|tsx)',
@@ -27,21 +32,6 @@ const customJestConfig = {
     '!src/generated/**/*',
     '!src/**/node_modules/**',
   ],
-  
-  // Module name mapping for absolute imports
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-  },
-  
-  // Environment variables for testing
-  testEnvironmentOptions: {
-    url: 'http://localhost:3000'
-  },
-  
-  // Transform configuration
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
-  },
   
   // Global setup and teardown (disabled for now)
   // globalSetup: '<rootDir>/__tests__/setup/globalSetup.js',

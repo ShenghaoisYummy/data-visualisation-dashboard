@@ -8,6 +8,7 @@ jest.mock('@/lib/database', () => ({
     },
     user: {
       findFirst: jest.fn(),
+      create: jest.fn(),
     },
   },
 }));

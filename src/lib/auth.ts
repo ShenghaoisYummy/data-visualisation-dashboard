@@ -54,19 +54,19 @@ export class AuthService {
    * @returns JWT token
    */
   static generateToken(user: User): string {
+    const payload: JWTPayload = {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      status: user.status,
+    };
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
     try {
-      const payload: JWTPayload = {
-        userId: user.id,
-        username: user.username,
-        email: user.email,
-        status: user.status,
-      };
-
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        throw new Error('JWT_SECRET environment variable is not set');
-      }
-
       return jwt.sign(payload, secret, { 
         expiresIn: '24h',
         issuer: 'data-viz-dashboard'

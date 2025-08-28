@@ -147,7 +147,7 @@ describe('AuthService Unit Tests', () => {
       expect(payload).toBeNull();
     });
 
-    it('should require JWT_SECRET environment variable', () => {
+    it('should require JWT_SECRET environment variable for verification', () => {
       const originalSecret = process.env.JWT_SECRET;
       delete process.env.JWT_SECRET;
       

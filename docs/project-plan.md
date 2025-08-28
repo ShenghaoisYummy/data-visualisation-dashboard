@@ -169,14 +169,14 @@ ImportBatch {
 - [x] Build admin interface for invitation code management *(28/08/2025)*
 
 **Testing Tasks (TDD - During Development):**
-- [ ] Authentication logic unit tests (login/register/session) - **Unit Testing**
-- [ ] Database schema and operations unit tests - **Unit Testing**
-- [ ] Password hashing and JWT generation unit tests - **Unit Testing**
-- [ ] Invitation code validation and usage tracking unit tests - **Unit Testing**
-- [ ] User status management unit tests - **Unit Testing**
-- [ ] Registration audit trail unit tests - **Unit Testing**
-- [ ] User registration/login system integration tests - **Integration Testing**
-- [ ] Protected route middleware unit tests - **Unit Testing**
+- [x] Authentication logic unit tests (login/register/session) - **Unit Testing** *(29/29 passing)*
+- [ ] Database schema and operations unit tests - **Unit Testing** *(Requires PostgreSQL setup)*
+- [x] Password hashing and JWT generation unit tests - **Unit Testing** *(Working)*
+- [ ] Invitation code validation and usage tracking unit tests - **Unit Testing** *(Requires database)*
+- [x] User status management unit tests - **Unit Testing** *(Mocked tests passing)*
+- [x] Registration audit trail unit tests - **Unit Testing** *(12/12 passing)*
+- [ ] User registration/login system integration tests - **Integration Testing** *(API tests partial)*
+- [x] Protected route middleware unit tests - **Unit Testing** *(Logic tested)*
 
 **Testing Tasks (After Feature Complete):**
 - [ ] Registration form component tests with invitation code input - **Component Testing**

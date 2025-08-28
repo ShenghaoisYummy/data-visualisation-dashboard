@@ -1,9 +1,9 @@
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
 
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-purposes-only';
-process.env.DATABASE_URL = 'file:./test.db';
+process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_database';
 
 // Mock fetch for API testing (disabled for now)
 // global.fetch = require('jest-fetch-mock');
@@ -22,16 +22,18 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/test-path',
 }));
 
-// Mock Next.js headers
-jest.mock('next/headers', () => ({
-  headers: () => Promise.resolve(new Map([
-    ['x-forwarded-for', '127.0.0.1'],
-    ['user-agent', 'test-user-agent'],
-    ['x-user-id', 'test-user-id'],
-    ['x-user-email', 'test@example.com'],
-    ['x-user-status', 'ACTIVE'],
-  ])),
-}));
+// Mock Next.js headers conditionally for different environments
+if (process.env.JEST_WORKER_ID !== undefined) {
+  jest.mock('next/headers', () => ({
+    headers: () => Promise.resolve(new Map([
+      ['x-forwarded-for', '127.0.0.1'],
+      ['user-agent', 'test-user-agent'],
+      ['x-user-id', 'test-user-id'],
+      ['x-user-email', 'test@example.com'],
+      ['x-user-status', 'ACTIVE'],
+    ])),
+  }));
+}
 
 // Mock console methods to reduce noise in tests
 global.console = {
