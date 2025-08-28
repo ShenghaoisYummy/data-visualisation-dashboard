@@ -13,3 +13,168 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Users table with staff lifecycle management
+model User {
+  id        String     @id @default(cuid())
+  username  String     @unique @db.VarChar(50)
+  email     String     @unique @db.VarChar(255) // Required for staff verification
+  password  String     @db.VarChar(255)  // bcrypt hashed
+  status    UserStatus @default(ACTIVE)  // Employee lifecycle management
+  
+  // Registration tracking
+  invitationCodeUsed String?    @db.VarChar(50) // Which code was used to register
+  registeredAt       DateTime   @default(now())
+  lastLoginAt        DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  products          Product[]
+  importBatches     ImportBatch[]
+  registrationAudit RegistrationAudit[]
+  
+  // Indexes only - validation moved to application layer
+  @@index([status])  // For filtering active users
+  @@index([invitationCodeUsed]) // For audit tracking
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE      // Active employee
+  SUSPENDED   // Temporarily disabled
+  TERMINATED  // Former employee - preserve data
+}
+
+// Staff-only registration system
+model InvitationCode {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(50)
+  
+  // Usage tracking
+  maxUses     Int      @default(10)    // How many people can use this code
+  currentUses Int      @default(0)     // How many have used it
+  isActive    Boolean  @default(true)  // Can be manually disabled
+  
+  // Expiration and metadata
+  expiresAt   DateTime                 // Automatic expiration
+  
+  // Organization info
+  department  String?  @db.VarChar(100) // "Store 01", "Management", "Inventory"
+  description String?  @db.VarChar(255) // "Monthly codes for Store 01 staff"
+  
+  // Audit trail
+  createdBy   String   @db.VarChar(255) // Admin email who created this
+  createdAt   DateTime @default(now())
+  
+  @@index([code, isActive])    // Fast code validation lookup
+  @@index([expiresAt, isActive]) // Cleanup expired codes
+  @@index([department])        // Organize by department/store
+  @@map("invitation_codes")
+}
+
+// Complete registration audit trail
+model RegistrationAudit {
+  id               String   @id @default(cuid())
+  userId           String
+  invitationCode   String   @db.VarChar(50)
+  userEmail        String   @db.VarChar(255)
+  registeredAt     DateTime @default(now())
+  ipAddress        String?  @db.VarChar(45)  // For security tracking
+  userAgent        String?  @db.VarChar(500) // Browser info
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([invitationCode])  // Track code usage
+  @@index([registeredAt])    // Time-based queries
+  @@map("registration_audit")
+}
+
+// Products table
+model Product {
+  id               String   @id @default(cuid())
+  productId        String   @db.VarChar(50)   // From Excel (e.g., "0000001")
+  productName      String   @db.VarChar(500)
+  openingInventory Int      @db.Integer
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Foreign Keys
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relationships
+  dailyData        DailyData[]
+  
+  // Indexes
+  @@unique([userId, productId]) // Prevent duplicate products per user
+  @@index([userId])
+  @@index([userId, productId])  // Composite index for performance
+  
+  // Validation moved to application layer
+  @@map("products")
+}
+
+// Daily data with Decimal precision for currency
+model DailyData {
+  id                 String   @id @default(cuid())
+  daySequence        Int      @db.Integer // 1, 2, 3... simplified from Excel
+  
+  // Raw Excel Data - nullable with proper types
+  procurementQty     Int?     @db.Integer
+  procurementPrice   Decimal? @db.Decimal(12,4) // Better for currency
+  salesQty           Int?     @db.Integer
+  salesPrice         Decimal? @db.Decimal(12,4) // Better for currency
+  
+  // Calculated Fields with proper precision
+  inventoryLevel     Int?     @db.Integer      // Allow negative (oversold)
+  procurementAmount  Decimal? @db.Decimal(15,4) // Larger for calculated amounts
+  salesAmount        Decimal? @db.Decimal(15,4) // Larger for calculated amounts
+  
+  // Import metadata
+  importBatchId      String?  @db.VarChar(50)  // Track which Excel file this came from
+  sourceRow          Int?     @db.Integer      // Original Excel row number for debugging
+  
+  createdAt          DateTime @default(now())
+  
+  // Foreign Keys
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, daySequence])
+  @@index([productId, daySequence])
+  @@index([importBatchId])
+  
+  // Validation moved to application layer  
+  @@map("daily_data")
+}
+
+// Import tracking for better debugging and conflict resolution
+model ImportBatch {
+  id                 String      @id @default(cuid())
+  userId             String
+  fileName           String      @db.VarChar(255)
+  fileSize           BigInt      // Handle large files
+  totalRows          Int         @db.Integer
+  validRows          Int         @db.Integer
+  skippedRows        Int         @db.Integer
+  status             ImportStatus @default(PROCESSING)
+  errorSummary       Json?       // Store error details as JSON
+  processingTimeMs   Int?        @db.Integer
+  createdAt          DateTime    @default(now())
+  completedAt        DateTime?
+  
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
+  @@map("import_batches")
+}
+
+enum ImportStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PARTIAL
+}

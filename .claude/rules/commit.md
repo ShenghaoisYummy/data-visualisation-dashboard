@@ -3,16 +3,19 @@
 Create well-formatted commits with conventional commit messages and emojis.
 
 ## Features:
+
 - Runs pre-commit checks by default (lint, build, generate docs)
 - Automatically stages files if none are staged
 - Uses conventional commit format with descriptive emojis
 - Suggests splitting commits for different concerns
 
 ## Usage:
+
 - `/commit` - Standard commit with pre-commit checks
 - `/commit --no-verify` - Skip pre-commit checks
 
 ## Commit Types:
+
 - ✨ feat: New features
 - 🐛 fix: Bug fixes
 - 📝 docs: Documentation changes
@@ -27,6 +30,7 @@ Create well-formatted commits with conventional commit messages and emojis.
 - 🔒 security: Security improvements
 
 ## Process:
+
 1. Check for staged changes (`git status`)
 2. If no staged changes, review and stage appropriate files
 3. Run pre-commit checks (unless --no-verify)
@@ -37,6 +41,7 @@ Create well-formatted commits with conventional commit messages and emojis.
 8. Execute commit
 
 ## Best Practices:
+
 - Keep commits atomic and focused
 - Write in imperative mood ("Add feature" not "Added feature")
 - Explain why, not just what
