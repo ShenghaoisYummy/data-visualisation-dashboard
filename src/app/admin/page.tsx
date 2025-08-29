@@ -34,11 +34,14 @@ export default function AdminPage() {
     handleSubmit,
     reset,
     formState: { errors }
-  } = useForm<CreateInvitationCodeInput>({
+  } = useForm({
     resolver: zodResolver(createInvitationCodeSchema),
     defaultValues: {
       maxUses: 10,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      department: undefined,
+      description: undefined,
+      prefix: undefined
     }
   });
 

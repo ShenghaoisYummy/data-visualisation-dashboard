@@ -139,7 +139,7 @@ export class DataValidator {
       } catch (error) {
         if (error instanceof z.ZodError) {
           // Convert Zod errors to our format
-          error.errors.forEach(zodError => {
+          error.issues.forEach(zodError => {
             errors.push({
               row: rowNumber,
               field: zodError.path.join('.'),

@@ -58,10 +58,10 @@ export class ImportBatchManager {
         validRows: validationResult.summary.validRows,
         skippedRows: validationResult.summary.invalidRows,
         status: 'PROCESSING',
-        errorSummary: validationResult.errors.length > 0 ? {
+        errorSummary: validationResult.errors.length > 0 ? JSON.parse(JSON.stringify({
           errors: validationResult.errors,
           warnings: validationResult.warnings
-        } : null
+        })) : undefined
       }
     });
     
@@ -296,6 +296,7 @@ export class ImportBatchManager {
       processingTimeMs: batch.processingTimeMs,
       createdAt: batch.createdAt,
       completedAt: batch.completedAt,
+      hasErrors: batch.errorSummary !== null && batch.errorSummary !== undefined,
       errorSummary: batch.errorSummary as any,
       productsCreated,
       user: batch.user

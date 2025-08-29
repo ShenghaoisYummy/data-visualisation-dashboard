@@ -21,9 +21,8 @@ export async function POST(request: NextRequest) {
     const result = await createSampleProducts(userId);
     
     return NextResponse.json({
-      success: true,
-      message: 'Sample data created successfully',
-      ...result
+      ...result,
+      message: 'Sample data created successfully'
     });
     
   } catch (error) {

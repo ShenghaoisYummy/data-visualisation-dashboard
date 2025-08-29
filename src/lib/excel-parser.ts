@@ -78,7 +78,7 @@ export class ExcelParser {
         throw new Error('Excel file is empty');
       }
       
-      return this.processJsonData(jsonData);
+      return this.processJsonData(jsonData as any[][]);
     } catch (error) {
       throw new Error(`Excel parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -193,21 +193,21 @@ export class ExcelParser {
     parsedRow['Product Name'] = this.parseStringField(rowData['Product Name'], 'Product Name', rowNumber, errors, true);
     
     // Required numeric field
-    parsedRow['Opening Inventory'] = this.parseNumericField(rowData['Opening Inventory'], 'Opening Inventory', rowNumber, errors, true);
+    parsedRow['Opening Inventory'] = this.parseNumericField(rowData['Opening Inventory'], 'Opening Inventory', rowNumber, errors, true) as number;
     
     // Optional numeric fields for each day
     for (let day = 1; day <= 3; day++) {
-      parsedRow[`Procurement Qty (Day ${day})` as keyof ExcelRow] = 
-        this.parseNumericField(rowData[`Procurement Qty (Day ${day})`], `Procurement Qty (Day ${day})`, rowNumber, errors, false);
+      (parsedRow as any)[`Procurement Qty (Day ${day})`] = 
+        this.parseNumericField(rowData[`Procurement Qty (Day ${day})`], `Procurement Qty (Day ${day})`, rowNumber, errors, false) ?? undefined;
       
-      parsedRow[`Procurement Price (Day ${day})` as keyof ExcelRow] = 
-        this.parseNumericField(rowData[`Procurement Price (Day ${day})`], `Procurement Price (Day ${day})`, rowNumber, errors, false);
+      (parsedRow as any)[`Procurement Price (Day ${day})`] = 
+        this.parseNumericField(rowData[`Procurement Price (Day ${day})`], `Procurement Price (Day ${day})`, rowNumber, errors, false) ?? undefined;
       
-      parsedRow[`Sales Qty (Day ${day})` as keyof ExcelRow] = 
-        this.parseNumericField(rowData[`Sales Qty (Day ${day})`], `Sales Qty (Day ${day})`, rowNumber, errors, false);
+      (parsedRow as any)[`Sales Qty (Day ${day})`] = 
+        this.parseNumericField(rowData[`Sales Qty (Day ${day})`], `Sales Qty (Day ${day})`, rowNumber, errors, false) ?? undefined;
       
-      parsedRow[`Sales Price (Day ${day})` as keyof ExcelRow] = 
-        this.parseNumericField(rowData[`Sales Price (Day ${day})`], `Sales Price (Day ${day})`, rowNumber, errors, false);
+      (parsedRow as any)[`Sales Price (Day ${day})`] = 
+        this.parseNumericField(rowData[`Sales Price (Day ${day})`], `Sales Price (Day ${day})`, rowNumber, errors, false) ?? undefined;
     }
     
     return parsedRow as ExcelRow;

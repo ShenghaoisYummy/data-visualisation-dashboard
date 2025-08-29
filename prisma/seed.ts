@@ -339,7 +339,7 @@ async function main() {
       status: 'COMPLETED',
       processingTimeMs: 1250,
       completedAt: new Date(),
-      errorSummary: null
+      errorSummary: undefined
     }
   });
 
