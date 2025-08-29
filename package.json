@@ -59,6 +59,10 @@
     "sqlite3": "^5.1.7",
     "supertest": "^7.1.4",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
