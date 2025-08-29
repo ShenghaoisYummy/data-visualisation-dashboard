@@ -3,7 +3,8 @@ require('@testing-library/jest-dom');
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-purposes-only';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_database';
+process.env.DATABASE_URL = 'postgresql://postgres:password@localhost:5433/data_viz_dashboard_test';
+process.env.DATABASE_TEST_URL = 'postgresql://postgres:password@localhost:5433/data_viz_dashboard_test';
 
 // Mock fetch for API testing (disabled for now)
 // global.fetch = require('jest-fetch-mock');

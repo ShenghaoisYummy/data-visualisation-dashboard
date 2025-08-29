@@ -12,7 +12,17 @@
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
-    "test:api": "jest --testPathPattern=api"
+    "test:api": "jest --testPathPattern=api",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:restart": "docker compose down && docker compose up -d",
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 5 && npm run db:migrate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio",
+    "db:seed": "npx prisma db seed",
+    "db:push": "npx prisma db push",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

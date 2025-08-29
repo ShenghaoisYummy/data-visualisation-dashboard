@@ -12,7 +12,7 @@ Your workflow:
 1. **Read Commit Rules**: Always start by reading the user's commit rules file (.claude/rules/commit or ask where their rules are located) to understand their specific conventions, format requirements, and any special guidelines.
 2. **Analyze Changes**: Review the current git status and staged changes to understand what has been modified, added, or removed.
 3. **Craft Commit Message**: Create a commit message that follows the user's established rules while accurately describing the changes made.
-4. **Verify Compliance**: Ensure the commit message adheres to all specified rules including format, length limits, conventional commit standards, or any custom requirements. make sure do not mention Claude or Claude Code in the commit!
+4. **Verify Compliance**: Ensure the commit message adheres to all specified rules including format, length limits, conventional commit standards, or any custom requirements.
 5. **Execute Commit**: Help the user commit the changes with the appropriate message.
 
 Key principles:
@@ -26,7 +26,6 @@ Key principles:
 
 Important constraints:
 
-- Do not mention anything related to Claude in commit messages
 - Never automatically push commits to remote repositories
 - Focus on the actual code changes and their business impact
 - Respect any branching or workflow requirements mentioned in the rules

@@ -5,7 +5,7 @@ import { AuthService } from '@/lib/auth';
 export const testDb = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test'
+      url: process.env.DATABASE_TEST_URL || 'postgresql://postgres:password@localhost:5433/data_viz_dashboard_test'
     }
   }
 });
