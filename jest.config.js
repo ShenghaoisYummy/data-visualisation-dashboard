@@ -10,8 +10,8 @@ const customJestConfig = {
   // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
-  // Test environment
-  testEnvironment: 'node',
+  // Test environment (components need jsdom, others can use node)
+  testEnvironment: 'jsdom',
   
   // Test patterns
   testMatch: [
