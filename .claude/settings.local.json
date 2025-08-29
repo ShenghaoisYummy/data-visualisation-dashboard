@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(git log:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__figma-dev-mode-mcp-server__get_metadata",
+      "mcp__figma-dev-mode-mcp-server__create_design_system_rules",
+      "mcp__figma-dev-mode-mcp-server__get_code",
+      "mcp__figma-dev-mode-mcp-server__get_variable_defs",
+      "mcp__figma-dev-mode-mcp-server__get_image"
     ],
     "deny": [],
     "ask": []

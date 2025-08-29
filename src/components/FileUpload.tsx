@@ -148,13 +148,13 @@ export default function FileUpload({
       {/* File Drop Zone */}
       <div
         className={clsx(
-          'relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+          'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
           {
-            'border-blue-400 bg-blue-50': isDragOver && !disabled,
-            'border-gray-300 hover:border-gray-400': !isDragOver && !disabled && !isUploading,
+            'border-[var(--color-blue-ink)] bg-[var(--color-blue-ink)]/5': isDragOver && !disabled,
+            'border-gray-300 hover:border-[var(--color-blue-ink)]': !isDragOver && !disabled && !isUploading,
             'border-gray-200 bg-gray-50 cursor-not-allowed': disabled || isUploading,
-            'border-green-400 bg-green-50': uploadResult?.success,
-            'border-red-400 bg-red-50': uploadResult && !uploadResult.success
+            'border-[var(--color-eucalyptus)] bg-[var(--color-eucalyptus)]/5': uploadResult?.success,
+            'border-[var(--color-cherry)] bg-[var(--color-cherry)]/5': uploadResult && !uploadResult.success
           }
         )}
         onDrop={handleDrop}
@@ -173,14 +173,14 @@ export default function FileUpload({
         
         {isUploading ? (
           <div className="space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-blue-ink)] mx-auto"></div>
             <div>
               <p className="text-lg font-medium text-gray-700">
                 {uploadProgress?.message}
               </p>
               <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-[var(--color-blue-ink)] h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress?.progress || 0}%` }}
                 ></div>
               </div>
@@ -190,7 +190,7 @@ export default function FileUpload({
           <div className="space-y-4">
             {uploadResult.success ? (
               <>
-                <div className="text-green-600">
+                <div className="text-[var(--color-eucalyptus)]">
                   <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -210,21 +210,21 @@ export default function FileUpload({
               </>
             ) : (
               <>
-                <div className="text-red-600">
+                <div className="text-[var(--color-cherry)]">
                   <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Upload Failed</h3>
-                  <p className="mt-1 text-sm text-red-600">{uploadResult.error}</p>
+                  <p className="mt-1 text-sm text-[var(--color-cherry)]">{uploadResult.error}</p>
                 </div>
               </>
             )}
             
             <button
               onClick={resetUpload}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="text-[var(--color-blue-ink)] hover:text-[var(--color-blue-ink)]/80 text-sm font-medium"
             >
               Upload Another File
             </button>

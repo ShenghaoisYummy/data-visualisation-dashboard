@@ -1,21 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Figma Design System Colors */
+  --color-night: #1F263E;
+  --color-cherry: #EE2E6B;
+  --color-blue-ink: #130EAD;
+  --color-eucalyptus: #01C0AA;
+  --color-midnight: #303750;
+  --color-milk: #FFFFFF;
+  
+  /* Theme mappings */
+  --background: var(--color-milk);
+  --foreground: var(--color-night);
+  --sidebar-bg: var(--color-night);
+  --sidebar-text: var(--color-milk);
+  --primary: var(--color-blue-ink);
+  --success: var(--color-eucalyptus);
+  --accent: var(--color-cherry);
+  --secondary: var(--color-midnight);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-primary: var(--primary);
+  --color-success: var(--success);
+  --color-accent: var(--accent);
+  --color-secondary: var(--secondary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-night);
+    --foreground: var(--color-milk);
   }
 }
 
