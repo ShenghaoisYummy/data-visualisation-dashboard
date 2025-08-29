@@ -184,20 +184,20 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Coming in Phase 3 */}
+          {/* Phase 3 Status */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Coming in Phase 3
+              Phase 3: Data Visualization ✓
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className="bg-green-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 mb-2">📊 Data Visualization</h4>
                 <p className="text-sm text-gray-600">
                   Interactive line charts showing inventory, procurement, and sales trends over 3 days
                 </p>
               </div>
               
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className="bg-green-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 mb-2">🔍 Multi-Product Comparison</h4>
                 <p className="text-sm text-gray-600">
                   Compare trends across multiple products simultaneously with Recharts
@@ -223,9 +223,11 @@ export default function DashboardPage() {
               >
                 Upload Excel File
               </Button>
-              <Button variant="outline" disabled>
-                View Charts (Phase 3)
-              </Button>
+              <Link href="/charts">
+                <Button variant="primary">
+                  View Charts
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
