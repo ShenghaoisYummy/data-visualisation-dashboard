@@ -131,6 +131,17 @@ export default function RegisterPage() {
               helperText="At least 8 characters with uppercase, lowercase, and number"
               {...register('password')}
             />
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              autoComplete="new-password"
+              required
+              placeholder="Re-enter your password"
+              error={errors.confirmPassword?.message || serverErrors.confirmPassword}
+              helperText="Must match the password above"
+              {...register('confirmPassword')}
+            />
           </div>
 
           {serverErrors._general && (

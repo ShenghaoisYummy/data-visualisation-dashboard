@@ -1,47 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
 import { loginSchema, validateInput } from '@/lib/validation';
-import { headers } from 'next/headers';
-
-// Rate limiting map
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(ip: string, maxRequests = 5, windowMs = 15 * 60 * 1000): boolean {
-  const now = Date.now();
-  const clientData = rateLimitMap.get(ip);
-  
-  if (!clientData || now > clientData.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
-    return true;
-  }
-  
-  if (clientData.count >= maxRequests) {
-    return false;
-  }
-  
-  clientData.count++;
-  return true;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP for rate limiting
-    const headersList = await headers();
-    const forwardedFor = headersList.get('x-forwarded-for');
-    const clientIP = forwardedFor?.split(',')[0] || 
-                     headersList.get('x-real-ip') || 
-                     'unknown';
-
-    // Rate limiting: 5 login attempts per 15 minutes per IP
-    if (!checkRateLimit(clientIP, 5, 15 * 60 * 1000)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Too many login attempts. Please try again later.' 
-        },
-        { status: 429 }
-      );
-    }
 
     // Parse request body
     const body = await request.json();

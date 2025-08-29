@@ -61,14 +61,17 @@ export async function POST(request: NextRequest) {
 
     // Get additional request info for audit trail
     const userAgent = headersList.get('user-agent') || '';
-    const registrationData = {
-      ...validation.data!,
+    
+    // Remove confirmPassword from data before passing to AuthService
+    const { confirmPassword, ...registrationData } = validation.data!;
+    const finalRegistrationData = {
+      ...registrationData,
       ipAddress: clientIP,
       userAgent
     };
 
     // Attempt registration
-    const result = await AuthService.register(registrationData);
+    const result = await AuthService.register(finalRegistrationData);
 
     if (!result.success) {
       return NextResponse.json(

@@ -24,11 +24,18 @@ export const registrationSchema = z.object({
       'Password must contain at least one uppercase letter, one lowercase letter, and one number'
     ),
   
+  confirmPassword: z
+    .string()
+    .min(1, 'Please confirm your password'),
+  
   invitationCode: z
     .string()
     .min(6, 'Invitation code must be at least 6 characters')
     .max(50, 'Invitation code must be no more than 50 characters')
     .transform(val => val.trim().toUpperCase())
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 // Login validation schema
