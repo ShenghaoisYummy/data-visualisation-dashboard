@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, parseInt(searchParams.get('limit') || '50') || 50);
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0') || 0);
     const search = searchParams.get('search') || '';
+    const batchId = searchParams.get('batchId') || '';
     
-    // Build where clause for search
+    // Build where clause for search and batch filtering
     const whereClause = {
       userId: userId,
       ...(search && {
@@ -28,14 +29,22 @@ export async function GET(request: NextRequest) {
           { productId: { contains: search, mode: 'insensitive' as const } },
           { productName: { contains: search, mode: 'insensitive' as const } }
         ]
+      }),
+      ...(batchId && {
+        dailyData: {
+          some: {
+            importBatchId: batchId
+          }
+        }
       })
     };
-    
+
     // Get products with pagination
     const products = await db.product.findMany({
       where: whereClause,
       include: {
         dailyData: {
+          where: batchId ? { importBatchId: batchId } : {},
           orderBy: { daySequence: 'asc' }
         }
       },

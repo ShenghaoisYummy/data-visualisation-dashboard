@@ -87,30 +87,39 @@ export class ImportBatchManager {
             progress
           });
           
-          // Check for existing product with same productId for this user
-          const existingProduct = await tx.product.findFirst({
+          // Find or create product record (allow same products across different batches)
+          let product = await tx.product.findFirst({
             where: {
               userId,
               productId: productCalc.productId
             }
           });
           
-          if (existingProduct) {
-            duplicateProducts.push(productCalc.productId);
-            continue; // Skip duplicate products
-          }
-          
-          // Create product record
-          const product = await tx.product.create({
-            data: {
-              productId: productCalc.productId,
-              productName: productCalc.productName,
-              openingInventory: productCalc.openingInventory,
-              userId
+          if (!product) {
+            // Create new product record
+            product = await tx.product.create({
+              data: {
+                productId: productCalc.productId,
+                productName: productCalc.productName,
+                openingInventory: productCalc.openingInventory,
+                userId
+              }
+            });
+            productsCreated++;
+          } else {
+            // Check if this product already has data for this batch
+            const existingDailyData = await tx.dailyData.findFirst({
+              where: {
+                productId: product.id,
+                importBatchId: importBatch.id
+              }
+            });
+            
+            if (existingDailyData) {
+              duplicateProducts.push(productCalc.productId);
+              continue; // Skip if product already has data in this batch
             }
-          });
-          
-          productsCreated++;
+          }
           
           // Create daily data records
           for (const daily of productCalc.dailyData) {

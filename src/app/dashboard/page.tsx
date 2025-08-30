@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 import ProductChart, { ProductData } from '@/components/ProductChart';
 import ProductSelector from '@/components/ProductSelector';
 import Link from 'next/link';
@@ -17,6 +18,16 @@ interface ApiResponse {
   };
 }
 
+interface ImportBatch {
+  id: string;
+  fileName: string;
+  uploadDate: string;
+  completedDate: string;
+  productsCount: number;
+  totalRows: number;
+  processingTime: number;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   
@@ -25,6 +36,11 @@ export default function DashboardPage() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  
+  // Import batch selection
+  const [importBatches, setImportBatches] = useState<ImportBatch[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const [batchesLoading, setBatchesLoading] = useState(true);
   
   // Chart display options
   const [showInventory, setShowInventory] = useState(true);
@@ -45,12 +61,48 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchImportBatches = async () => {
+    try {
+      setBatchesLoading(true);
+      
+      const response = await fetch('/api/dashboard/import-batches');
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/login');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setImportBatches(data.batches);
+      
+      // Auto-select the most recent batch
+      if (data.batches.length > 0 && !selectedBatchId) {
+        setSelectedBatchId(data.batches[0].id);
+      }
+      
+    } catch (err) {
+      console.error('Failed to fetch import batches:', err);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const response = await fetch('/api/dashboard/products?limit=50');
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.set('limit', '50');
+      if (selectedBatchId) {
+        params.set('batchId', selectedBatchId);
+      }
+      
+      const response = await fetch(`/api/dashboard/products?${params.toString()}`);
       
       if (!response.ok) {
         if (response.status === 401) {
@@ -61,6 +113,7 @@ export default function DashboardPage() {
       }
       
       const data: ApiResponse = await response.json();
+      
       setProducts(data.products);
       
       // Auto-select first product if available and no products currently selected
@@ -77,8 +130,21 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    fetchProducts();
+    fetchImportBatches();
   }, [router]);
+
+  useEffect(() => {
+    if (selectedBatchId) {
+      fetchProducts();
+    }
+  }, [selectedBatchId]);
+
+  // Initial fetch when batches are loaded and batch is auto-selected
+  useEffect(() => {
+    if (importBatches.length > 0 && selectedBatchId && products.length === 0) {
+      fetchProducts();
+    }
+  }, [importBatches, selectedBatchId]);
 
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
@@ -242,6 +308,52 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Batch Selector */}
+              <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-[var(--color-night)] mb-3">Upload Date Selection</h3>
+                {batchesLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-blue-ink)] mr-2"></div>
+                    <span className="text-sm text-gray-600">Loading upload history...</span>
+                  </div>
+                ) : importBatches.length === 0 ? (
+                  <div className="text-sm text-gray-600">
+                    No import batches found. Upload an Excel file to start analyzing data.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Select Upload Batch
+                    </label>
+                    <select
+                      value={selectedBatchId}
+                      onChange={(e) => setSelectedBatchId(e.target.value)}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[var(--color-blue-ink)] focus:border-[var(--color-blue-ink)] sm:text-sm"
+                    >
+                      {importBatches.map((batch) => (
+                        <option key={batch.id} value={batch.id}>
+                          {batch.fileName} - {new Date(batch.uploadDate).toLocaleDateString()} {new Date(batch.uploadDate).toLocaleTimeString()} ({batch.productsCount} products)
+                        </option>
+                      ))}
+                    </select>
+                    {selectedBatchId && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {(() => {
+                          const batch = importBatches.find(b => b.id === selectedBatchId);
+                          return batch ? (
+                            <>
+                              Uploaded: {new Date(batch.uploadDate).toLocaleString()} • 
+                              Products: {batch.productsCount}/{batch.totalRows} • 
+                              Processing time: {batch.processingTime}ms
+                            </>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
@@ -288,9 +400,11 @@ export default function DashboardPage() {
                   <p className="text-gray-600 mb-4">
                     Upload an Excel file with your product data to start analyzing trends.
                   </p>
-                  <Button variant="primary" onClick={() => setShowUpload(true)}>
-                    Upload Excel File
-                  </Button>
+                  <Link href="/upload">
+                    <Button variant="primary">
+                      Upload Excel File
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

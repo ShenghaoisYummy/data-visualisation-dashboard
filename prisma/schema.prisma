@@ -142,7 +142,7 @@ model DailyData {
   productId          String
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   
-  @@unique([productId, daySequence])
+  @@unique([productId, daySequence, importBatchId])
   @@index([productId, daySequence])
   @@index([importBatchId])
   

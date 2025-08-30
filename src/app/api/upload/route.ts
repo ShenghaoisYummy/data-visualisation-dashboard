@@ -17,9 +17,27 @@ export async function POST(request: NextRequest) {
     const headersList = await headers();
     const userId = headersList.get('x-user-id');
     
+    console.log('Upload API - User ID from headers:', userId);
+    
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+    
+    // Verify user exists in database
+    const { db } = await import('@/lib/database');
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, status: true }
+    });
+    
+    console.log('Upload API - User found:', user);
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found in database' },
         { status: 401 }
       );
     }
