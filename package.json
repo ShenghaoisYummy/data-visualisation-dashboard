@@ -22,6 +22,8 @@
     "db:studio": "npx prisma studio",
     "db:seed": "npx prisma db seed",
     "db:push": "npx prisma db push",
+    "seed:production": "tsx prisma/seed.ts",
+    "deploy:production": "./scripts/setup-production.sh",
     "postinstall": "npx prisma generate"
   },
   "dependencies": {
