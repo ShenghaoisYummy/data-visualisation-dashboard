@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import ProductChart, { ProductData } from '@/components/ProductChart';
 import ProductSelector from '@/components/ProductSelector';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 import Link from 'next/link';
 
 interface ApiResponse {
@@ -46,6 +47,11 @@ export default function DashboardPage() {
   const [showInventory, setShowInventory] = useState(true);
   const [showProcurement, setShowProcurement] = useState(true);
   const [showSales, setShowSales] = useState(true);
+  
+  // Delete functionality state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string>('');
 
   const handleLogout = async () => {
     try {
@@ -128,6 +134,56 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteBatch = (batchId: string) => {
+    setDeletingBatchId(batchId);
+    setDeleteError('');
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingBatchId) return;
+    
+    try {
+      const response = await fetch(`/api/dashboard/import-batches/${deletingBatchId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      await response.json();
+      
+      // Remove the deleted batch from the list
+      setImportBatches(prev => prev.filter(batch => batch.id !== deletingBatchId));
+      
+      // Handle batch selection after deletion
+      if (selectedBatchId === deletingBatchId) {
+        // Select the most recent remaining batch, or clear selection
+        const remainingBatches = importBatches.filter(batch => batch.id !== deletingBatchId);
+        if (remainingBatches.length > 0) {
+          setSelectedBatchId(remainingBatches[0].id);
+        } else {
+          setSelectedBatchId('');
+          setProducts([]);
+        }
+      }
+      
+      // Close dialog and reset state
+      setShowDeleteConfirm(false);
+      setDeletingBatchId(null);
+      
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete batch');
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setDeletingBatchId(null);
+    setDeleteError('');
+  };
 
   useEffect(() => {
     fetchImportBatches();
@@ -322,9 +378,25 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Select Upload Batch
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Select Upload Batch
+                      </label>
+                      {selectedBatchId && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteBatch(selectedBatchId)}
+                          className="px-2 py-1 text-xs"
+                          title="Delete selected batch and all its data"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                     <select
                       value={selectedBatchId}
                       onChange={(e) => setSelectedBatchId(e.target.value)}
@@ -520,6 +592,52 @@ export default function DashboardPage() {
 
         </div>
       </main>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Upload Batch"
+        message="Are you sure you want to delete this upload batch?"
+        details={(() => {
+          const batch = importBatches.find(b => b.id === deletingBatchId);
+          return batch
+            ? `This will permanently delete "${batch.fileName}" and all ${batch.productsCount} products with their daily data. This action cannot be undone.`
+            : '';
+        })()}
+        confirmText="Delete Batch"
+        cancelText="Cancel"
+        variant="destructive"
+        loading={false}
+      />
+
+      {/* Delete Error Display */}
+      {deleteError && (
+        <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg z-40">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">Delete Failed</p>
+              <p className="text-sm text-red-700 mt-1">{deleteError}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setDeleteError('')}
+                className="text-red-400 hover:text-red-600"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
