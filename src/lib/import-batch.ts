@@ -72,78 +72,109 @@ export class ImportBatchManager {
         progress: 50
       });
       
-      // Process in transaction for data consistency
-      const result = await db.$transaction(async (tx) => {
-        const duplicateProducts: string[] = [];
-        let productsCreated = 0;
-        let dailyDataCreated = 0;
-        
-        // Process each product calculation
-        for (const [index, productCalc] of calculations.entries()) {
-          const progress = 50 + Math.floor((index / calculations.length) * 40);
-          onProgress?.({
-            stage: 'saving',
-            message: `Processing product ${index + 1}/${calculations.length}`,
-            progress
-          });
+      // Process in smaller batches to avoid transaction timeouts
+      const duplicateProducts: string[] = [];
+      let productsCreated = 0;
+      let dailyDataCreated = 0;
+      
+      const BATCH_SIZE = 50; // Process 50 products at a time
+      const batches = [];
+      
+      // Split calculations into batches
+      for (let i = 0; i < calculations.length; i += BATCH_SIZE) {
+        batches.push(calculations.slice(i, i + BATCH_SIZE));
+      }
+      
+      // Process each batch in separate transactions
+      for (const [batchIndex, batch] of batches.entries()) {
+        const batchResult = await db.$transaction(async (tx) => {
+          const batchDuplicates: string[] = [];
+          let batchProductsCreated = 0;
+          let batchDailyDataCreated = 0;
           
-          // Find or create product record (allow same products across different batches)
-          let product = await tx.product.findFirst({
-            where: {
-              userId,
-              productId: productCalc.productId
-            }
-          });
-          
-          if (!product) {
-            // Create new product record
-            product = await tx.product.create({
-              data: {
-                productId: productCalc.productId,
-                productName: productCalc.productName,
-                openingInventory: productCalc.openingInventory,
-                userId
-              }
+          // Process each product calculation in this batch
+          for (const [index, productCalc] of batch.entries()) {
+            const overallIndex = batchIndex * BATCH_SIZE + index;
+            const progress = 50 + Math.floor((overallIndex / calculations.length) * 40);
+            onProgress?.({
+              stage: 'saving',
+              message: `Processing product ${overallIndex + 1}/${calculations.length}`,
+              progress
             });
-            productsCreated++;
-          } else {
-            // Check if this product already has data for this batch
-            const existingDailyData = await tx.dailyData.findFirst({
+            
+            // Find or create product record (allow same products across different batches)
+            let product = await tx.product.findFirst({
               where: {
-                productId: product.id,
-                importBatchId: importBatch.id
+                userId,
+                productId: productCalc.productId
               }
             });
             
-            if (existingDailyData) {
-              duplicateProducts.push(productCalc.productId);
-              continue; // Skip if product already has data in this batch
+            if (!product) {
+              // Create new product record
+              product = await tx.product.create({
+                data: {
+                  productId: productCalc.productId,
+                  productName: productCalc.productName,
+                  openingInventory: productCalc.openingInventory,
+                  userId
+                }
+              });
+              batchProductsCreated++;
+            } else {
+              // Check if this product already has data for this batch
+              const existingDailyData = await tx.dailyData.findFirst({
+                where: {
+                  productId: product.id,
+                  importBatchId: importBatch.id
+                }
+              });
+              
+              if (existingDailyData) {
+                batchDuplicates.push(productCalc.productId);
+                continue; // Skip if product already has data in this batch
+              }
             }
+            
+            // Prepare daily data for bulk insert
+            const dailyDataToInsert = productCalc.dailyData.map(daily => ({
+              productId: product.id,
+              daySequence: daily.day,
+              procurementQty: daily.procurementQty,
+              procurementPrice: daily.procurementPrice ? new Decimal(daily.procurementPrice.toString()) : null,
+              procurementAmount: daily.procurementAmount ? new Decimal(daily.procurementAmount.toString()) : null,
+              salesQty: daily.salesQty,
+              salesPrice: daily.salesPrice ? new Decimal(daily.salesPrice.toString()) : null,
+              salesAmount: daily.salesAmount ? new Decimal(daily.salesAmount.toString()) : null,
+              inventoryLevel: daily.inventoryLevel,
+              importBatchId: importBatch.id,
+              sourceRow: overallIndex + 2 // +2 for header and 1-based indexing
+            }));
+            
+            // Bulk insert daily data for this product
+            await tx.dailyData.createMany({
+              data: dailyDataToInsert
+            });
+            batchDailyDataCreated += dailyDataToInsert.length;
           }
           
-          // Create daily data records
-          for (const daily of productCalc.dailyData) {
-            await tx.dailyData.create({
-              data: {
-                productId: product.id,
-                daySequence: daily.day,
-                procurementQty: daily.procurementQty,
-                procurementPrice: daily.procurementPrice ? new Decimal(daily.procurementPrice.toString()) : null,
-                procurementAmount: daily.procurementAmount ? new Decimal(daily.procurementAmount.toString()) : null,
-                salesQty: daily.salesQty,
-                salesPrice: daily.salesPrice ? new Decimal(daily.salesPrice.toString()) : null,
-                salesAmount: daily.salesAmount ? new Decimal(daily.salesAmount.toString()) : null,
-                inventoryLevel: daily.inventoryLevel,
-                importBatchId: importBatch.id,
-                sourceRow: index + 2 // +2 for header and 1-based indexing
-              }
-            });
-            dailyDataCreated++;
-          }
-        }
+          return { 
+            duplicates: batchDuplicates, 
+            productsCreated: batchProductsCreated, 
+            dailyDataCreated: batchDailyDataCreated 
+          };
+        }, {
+          maxWait: 10000, // Wait a maximum of 10 seconds to get a transaction from the pool
+          timeout: 30000, // Allow transaction to run for up to 30 seconds
+        });
         
-        return { duplicateProducts, productsCreated, dailyDataCreated };
-      });
+        // Aggregate results
+        duplicateProducts.push(...batchResult.duplicates);
+        productsCreated += batchResult.productsCreated;
+        dailyDataCreated += batchResult.dailyDataCreated;
+      }
+      
+      const result = { duplicateProducts, productsCreated, dailyDataCreated };
       
       const processingTimeMs = Date.now() - startTime;
       

@@ -14,7 +14,7 @@
   },
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 30,
+      "maxDuration": 60,
       "includeFiles": "src/generated/prisma/**"
     }
   },
