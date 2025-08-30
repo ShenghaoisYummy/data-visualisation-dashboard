@@ -29,7 +29,7 @@ export interface ParsedExcelData {
 export interface ExcelParseError {
   row: number;
   field: string;
-  value: any;
+  value: unknown;
   message: string;
 }
 

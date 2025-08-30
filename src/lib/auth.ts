@@ -10,10 +10,13 @@ export interface JWTPayload {
   status: UserStatus;
 }
 
+// Safe user type without password for API responses
+export type SafeUser = Omit<User, 'password'>;
+
 export interface AuthResult {
   success: boolean;
   message: string;
-  user?: User;
+  user?: SafeUser;
   token?: string;
   errors?: Record<string, string>;
 }
@@ -110,7 +113,7 @@ export class AuthService {
     try {
       // Timing attack prevention: perform a dummy hash operation
       // even if user doesn't exist to maintain consistent timing
-      let hashedDummy = '$2b$12$dummyhashtopreventtimingattacks';
+      const hashedDummy = '$2b$12$dummyhashtopreventtimingattacks';
       
       // Find user by username or email
       const user = await db.user.findFirst({

@@ -3,13 +3,33 @@
 import { useState, useRef, useCallback } from 'react';
 import { clsx } from 'clsx';
 
+export interface UploadSummary {
+  import?: {
+    productsCreated: number;
+    processingTimeMs: number;
+  };
+  calculations?: {
+    totalSalesValue: number;
+  };
+}
+
+export interface UploadWarning {
+  row: number;
+  message: string;
+}
+
+export interface CalculationWarning {
+  productId: string;
+  message: string;
+}
+
 export interface UploadResult {
   success: boolean;
   batchId?: string;
-  summary?: any;
+  summary?: UploadSummary;
   error?: string;
-  warnings?: any[];
-  calculationWarnings?: any[];
+  warnings?: UploadWarning[];
+  calculationWarnings?: CalculationWarning[];
 }
 
 export interface FileUploadProps {

@@ -16,7 +16,8 @@ export class InvitationCodeService {
   static generateCode(prefix?: string): string {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return prefix ? `${prefix}_${timestamp}${random}` : `STAFF_${timestamp}${random}`;
+    const result = prefix ? `${prefix}_${timestamp}${random}` : `STAFF_${timestamp}${random}`;
+    return result.toUpperCase();
   }
 
   /**
