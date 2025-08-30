@@ -108,6 +108,10 @@ export class AuthService {
    */
   static async login(username: string, password: string): Promise<AuthResult> {
     try {
+      // Timing attack prevention: perform a dummy hash operation
+      // even if user doesn't exist to maintain consistent timing
+      let hashedDummy = '$2b$12$dummyhashtopreventtimingattacks';
+      
       // Find user by username or email
       const user = await db.user.findFirst({
         where: {
@@ -117,6 +121,10 @@ export class AuthService {
           ]
         }
       });
+
+      // Always perform password comparison to prevent timing attacks
+      const userPassword = user?.password || hashedDummy;
+      const isPasswordValid = await this.comparePassword(password, userPassword);
 
       if (!user) {
         return {
@@ -138,8 +146,7 @@ export class AuthService {
         };
       }
 
-      // Verify password
-      const isPasswordValid = await this.comparePassword(password, user.password);
+      // Check password validity (already computed above for timing attack prevention)
       if (!isPasswordValid) {
         return {
           success: false,
@@ -159,7 +166,17 @@ export class AuthService {
       return {
         success: true,
         message: 'Login successful',
-        user,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          status: user.status,
+          invitationCodeUsed: user.invitationCodeUsed,
+          registeredAt: user.registeredAt,
+          lastLoginAt: user.lastLoginAt,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
         token
       };
     } catch (error) {
@@ -257,7 +274,17 @@ export class AuthService {
       return {
         success: true,
         message: 'Registration successful',
-        user: newUser,
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          status: newUser.status,
+          invitationCodeUsed: newUser.invitationCodeUsed,
+          registeredAt: newUser.registeredAt,
+          lastLoginAt: newUser.lastLoginAt,
+          createdAt: newUser.createdAt,
+          updatedAt: newUser.updatedAt,
+        },
         token
       };
     } catch (error) {

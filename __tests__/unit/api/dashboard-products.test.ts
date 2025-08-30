@@ -113,6 +113,7 @@ describe('Dashboard Products API', () => {
         where: { userId: mockUserId },
         include: {
           dailyData: {
+            where: {},
             orderBy: { daySequence: 'asc' }
           }
         },

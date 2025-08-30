@@ -28,7 +28,7 @@ describe('POST /api/auth/logout', () => {
       expect(setCookieHeader).toContain('auth-token=');
       expect(setCookieHeader).toContain('Max-Age=0');
       expect(setCookieHeader).toContain('HttpOnly');
-      expect(setCookieHeader).toContain('SameSite=Strict');
+      expect(setCookieHeader).toContain('SameSite=strict');
       expect(setCookieHeader).toContain('Path=/');
     });
 

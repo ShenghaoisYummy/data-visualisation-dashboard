@@ -1,5 +1,29 @@
 require('@testing-library/jest-dom');
 
+// Polyfill for Node.js environment - NextJS API routes need these globals
+const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
+// Mock Web API globals needed by Next.js API routes only in Node.js environment
+if (typeof global !== 'undefined' && !global.window) {
+  if (!global.Request) {
+    try {
+      global.Request = require('next/server').NextRequest;
+    } catch (e) {
+      // Ignore if NextRequest is not available (e.g., in component tests)
+    }
+  }
+
+  if (!global.Response) {
+    try {
+      global.Response = require('next/server').NextResponse;
+    } catch (e) {
+      // Ignore if NextResponse is not available (e.g., in component tests)
+    }
+  }
+}
+
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-purposes-only';

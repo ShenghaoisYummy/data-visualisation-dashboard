@@ -10,8 +10,8 @@ const customJestConfig = {
   // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
-  // Test environment (components need jsdom, others can use node)
-  testEnvironment: 'jsdom',
+  // Test environment - use node for most tests, jsdom will be overridden where needed
+  testEnvironment: 'node',
   
   // Test patterns
   testMatch: [
@@ -31,6 +31,11 @@ const customJestConfig = {
     '!src/**/*.d.ts',
     '!src/generated/**/*',
     '!src/**/node_modules/**',
+  ],
+  
+  // Transform ignore patterns for node_modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(next)/)'
   ],
   
   // Global setup and teardown (disabled for now)

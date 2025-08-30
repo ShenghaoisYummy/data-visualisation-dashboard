@@ -198,16 +198,16 @@ export class ExcelParser {
     // Optional numeric fields for each day
     for (let day = 1; day <= 3; day++) {
       (parsedRow as any)[`Procurement Qty (Day ${day})`] = 
-        this.parseNumericField(rowData[`Procurement Qty (Day ${day})`], `Procurement Qty (Day ${day})`, rowNumber, errors, false) ?? undefined;
+        this.parseNumericField(rowData[`Procurement Qty (Day ${day})`], `Procurement Qty (Day ${day})`, rowNumber, errors, false);
       
       (parsedRow as any)[`Procurement Price (Day ${day})`] = 
-        this.parseNumericField(rowData[`Procurement Price (Day ${day})`], `Procurement Price (Day ${day})`, rowNumber, errors, false) ?? undefined;
+        this.parseNumericField(rowData[`Procurement Price (Day ${day})`], `Procurement Price (Day ${day})`, rowNumber, errors, false);
       
       (parsedRow as any)[`Sales Qty (Day ${day})`] = 
-        this.parseNumericField(rowData[`Sales Qty (Day ${day})`], `Sales Qty (Day ${day})`, rowNumber, errors, false) ?? undefined;
+        this.parseNumericField(rowData[`Sales Qty (Day ${day})`], `Sales Qty (Day ${day})`, rowNumber, errors, false);
       
       (parsedRow as any)[`Sales Price (Day ${day})`] = 
-        this.parseNumericField(rowData[`Sales Price (Day ${day})`], `Sales Price (Day ${day})`, rowNumber, errors, false) ?? undefined;
+        this.parseNumericField(rowData[`Sales Price (Day ${day})`], `Sales Price (Day ${day})`, rowNumber, errors, false);
     }
     
     return parsedRow as ExcelRow;
