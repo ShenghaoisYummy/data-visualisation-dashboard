@@ -192,8 +192,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (selectedBatchId) {
       fetchProducts();
+    } else if (!batchesLoading && importBatches.length === 0) {
+      // No batches available, stop loading
+      setLoading(false);
+      setProducts([]);
     }
-  }, [selectedBatchId]);
+  }, [selectedBatchId, batchesLoading, importBatches.length]);
 
   // Initial fetch when batches are loaded and batch is auto-selected
   useEffect(() => {
