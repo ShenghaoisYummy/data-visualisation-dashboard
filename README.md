@@ -2,6 +2,10 @@
 
 A comprehensive data visualization dashboard for an Asian grocery chain to analyze inventory, procurement, and sales trends from Excel imports. The application features staff-only registration with invitation codes, Excel data processing, and interactive multi-product trend charts.
 
+## 🎯 Try It Out
+
+Feel free to explore the live [Demo](https://data-visualisation-dashboard-three.vercel.app/dashboard)! Authentication credentials and deployment details are available in the [deployment guide](docs/deployment-guide.md).
+
 ## 🚀 Features
 
 - **🔐 Staff-Only Registration**: Invitation code-based user registration system with lifecycle management
