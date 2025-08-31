@@ -236,9 +236,9 @@ export class ImportBatchManager {
         }
 
         // Aggregate results
-        duplicateProducts.push(...batchResult.duplicates);
-        productsCreated += batchResult.productsCreated;
-        dailyDataCreated += batchResult.dailyDataCreated;
+        duplicateProducts.push(...(batchResult?.duplicates || []));
+        productsCreated += batchResult?.productsCreated || 0;
+        dailyDataCreated += batchResult?.dailyDataCreated || 0;
 
         // Add a small delay between batches to reduce database load
         if (batchIndex < batches.length - 1) {
