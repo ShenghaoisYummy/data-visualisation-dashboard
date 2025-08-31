@@ -29,6 +29,34 @@ interface ImportBatch {
   processingTime: number;
 }
 
+interface BatchStats {
+  totalProcurement: {
+    amount: string;
+    label: string;
+    change: string;
+    trend: 'up' | 'down' | 'neutral';
+  };
+  totalSales: {
+    amount: string;
+    label: string;
+    change: string;
+    trend: 'up' | 'down' | 'neutral';
+  };
+  inventoryLevel: {
+    count: number;
+    label: string;
+    change: string;
+    trend: 'up' | 'down' | 'neutral';
+  };
+  importDate: {
+    date: string | null;
+    fileName: string;
+    label: string;
+    change: string;
+    trend: 'up' | 'down' | 'neutral';
+  };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   
@@ -42,6 +70,10 @@ export default function DashboardPage() {
   const [importBatches, setImportBatches] = useState<ImportBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [batchesLoading, setBatchesLoading] = useState(true);
+  
+  // Batch statistics
+  const [batchStats, setBatchStats] = useState<BatchStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   // Chart display options
   const [showInventory, setShowInventory] = useState(true);
@@ -64,6 +96,35 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const fetchBatchStats = async (batchId?: string) => {
+    try {
+      setStatsLoading(true);
+      
+      const params = new URLSearchParams();
+      if (batchId) {
+        params.set('batchId', batchId);
+      }
+      
+      const response = await fetch(`/api/dashboard/batch-stats?${params.toString()}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/login');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setBatchStats(data.stats);
+      
+    } catch (err) {
+      console.error('Failed to fetch batch statistics:', err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -170,6 +231,11 @@ export default function DashboardPage() {
         }
       }
       
+      // Refresh batch statistics after deletion
+      const remainingBatches = importBatches.filter(batch => batch.id !== deletingBatchId);
+      const newSelectedBatch = remainingBatches.length > 0 ? remainingBatches[0].id : '';
+      await fetchBatchStats(newSelectedBatch);
+      
       // Close dialog and reset state
       setShowDeleteConfirm(false);
       setDeletingBatchId(null);
@@ -186,8 +252,16 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    fetchBatchStats();
     fetchImportBatches();
   }, [router]);
+
+  // Refresh batch stats when selected batch changes
+  useEffect(() => {
+    if (selectedBatchId) {
+      fetchBatchStats(selectedBatchId);
+    }
+  }, [selectedBatchId]);
 
   useEffect(() => {
     if (selectedBatchId) {
@@ -292,67 +366,141 @@ export default function DashboardPage() {
         {/* Dashboard Content */}
         <div className="p-6">
         <div className="space-y-6">
-          {/* Stats Cards Row - Always Visible */}
+          {/* Batch Stats Cards Row - Always Visible */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Products</p>
-                  <p className="text-2xl font-bold text-[var(--color-night)] mt-2">990+</p>
-                  <p className="text-sm text-[var(--color-eucalyptus)] mt-1">+4.56% ↑</p>
+            {statsLoading ? (
+              // Loading skeleton
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-xl p-6 border border-gray-100 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
+                      <div className="h-4 bg-gray-200 rounded w-12"></div>
+                    </div>
+                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                  </div>
                 </div>
-                <div className="w-12 h-12 bg-[var(--color-eucalyptus)]/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[var(--color-eucalyptus)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
+              ))
+            ) : batchStats ? (
+              <>
+                {/* Total Procurement */}
+                <div className="bg-white rounded-xl p-6 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{batchStats.totalProcurement.label}</p>
+                      <p className="text-2xl font-bold text-[var(--color-night)] mt-2">
+                        ${parseFloat(batchStats.totalProcurement.amount).toFixed(2)}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        batchStats.totalProcurement.trend === 'up' ? 'text-[var(--color-eucalyptus)]' :
+                        batchStats.totalProcurement.trend === 'down' ? 'text-[var(--color-cherry)]' :
+                        'text-gray-500'
+                      }`}>
+                        {batchStats.totalProcurement.change} {
+                          batchStats.totalProcurement.trend === 'up' ? '↑' :
+                          batchStats.totalProcurement.trend === 'down' ? '↓' : '—'
+                        }
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-[var(--color-eucalyptus)]/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-[var(--color-eucalyptus)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Total Sales */}
+                <div className="bg-white rounded-xl p-6 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{batchStats.totalSales.label}</p>
+                      <p className="text-2xl font-bold text-[var(--color-night)] mt-2">
+                        ${parseFloat(batchStats.totalSales.amount).toFixed(2)}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        batchStats.totalSales.trend === 'up' ? 'text-[var(--color-eucalyptus)]' :
+                        batchStats.totalSales.trend === 'down' ? 'text-[var(--color-cherry)]' :
+                        'text-gray-500'
+                      }`}>
+                        {batchStats.totalSales.change} {
+                          batchStats.totalSales.trend === 'up' ? '↑' :
+                          batchStats.totalSales.trend === 'down' ? '↓' : '—'
+                        }
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-[var(--color-blue-ink)]/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-[var(--color-blue-ink)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inventory Level */}
+                <div className="bg-white rounded-xl p-6 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{batchStats.inventoryLevel.label}</p>
+                      <p className="text-2xl font-bold text-[var(--color-night)] mt-2">
+                        {batchStats.inventoryLevel.count.toLocaleString()}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        batchStats.inventoryLevel.trend === 'up' ? 'text-[var(--color-eucalyptus)]' :
+                        batchStats.inventoryLevel.trend === 'down' ? 'text-[var(--color-cherry)]' :
+                        'text-gray-500'
+                      }`}>
+                        {batchStats.inventoryLevel.change} {
+                          batchStats.inventoryLevel.trend === 'up' ? '↑' :
+                          batchStats.inventoryLevel.trend === 'down' ? '↓' : '—'
+                        }
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-[var(--color-midnight)]/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-[var(--color-midnight)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Import Date */}
+                <div className="bg-white rounded-xl p-6 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{batchStats.importDate.label}</p>
+                      <p className="text-2xl font-bold text-[var(--color-night)] mt-2">
+                        {batchStats.importDate.date 
+                          ? new Date(batchStats.importDate.date).toLocaleDateString()
+                          : 'No imports'
+                        }
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        batchStats.importDate.trend === 'up' ? 'text-[var(--color-eucalyptus)]' :
+                        batchStats.importDate.trend === 'down' ? 'text-[var(--color-cherry)]' :
+                        'text-gray-500'
+                      }`}>
+                        {batchStats.importDate.change} {
+                          batchStats.importDate.trend === 'up' ? '↑' :
+                          batchStats.importDate.trend === 'down' ? '↓' : '—'
+                        }
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-[var(--color-cherry)]/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-[var(--color-cherry)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Error state or no data
+              <div className="col-span-full bg-white rounded-xl p-6 border border-gray-100 text-center">
+                <p className="text-gray-500">Unable to load batch statistics</p>
               </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Sales</p>
-                  <p className="text-2xl font-bold text-[var(--color-night)] mt-2">¥22,370</p>
-                  <p className="text-sm text-[var(--color-eucalyptus)] mt-1">+6.45% ↑</p>
-                </div>
-                <div className="w-12 h-12 bg-[var(--color-blue-ink)]/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[var(--color-blue-ink)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Inventory Value</p>
-                  <p className="text-2xl font-bold text-[var(--color-night)] mt-2">¥10,604</p>
-                  <p className="text-sm text-[var(--color-cherry)] mt-1">-0.8% ↓</p>
-                </div>
-                <div className="w-12 h-12 bg-[var(--color-cherry)]/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[var(--color-cherry)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Procurement</p>
-                  <p className="text-2xl font-bold text-[var(--color-night)] mt-2">¥50,839</p>
-                  <p className="text-sm text-[var(--color-eucalyptus)] mt-1">+6.65% ↑</p>
-                </div>
-                <div className="w-12 h-12 bg-[var(--color-midnight)]/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[var(--color-midnight)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Charts Section - Always Visible */}
