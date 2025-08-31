@@ -13,10 +13,11 @@ export const db =
         url: process.env.DATABASE_URL,
       },
     },
-    // Optimize for serverless environments
+    // Optimize for serverless environments and large dataset processing
     transactionOptions: {
-      maxWait: 10000, // default: 2000
-      timeout: 30000, // default: 5000
+      maxWait: 15000, // Wait longer for transaction from pool during bulk operations
+      timeout: 60000, // Allow longer transaction execution for large imports
+      isolationLevel: 'ReadCommitted', // Use read committed for better concurrent performance
     },
   });
 

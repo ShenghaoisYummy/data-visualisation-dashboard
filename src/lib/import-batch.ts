@@ -77,7 +77,7 @@ export class ImportBatchManager {
       let productsCreated = 0;
       let dailyDataCreated = 0;
       
-      const BATCH_SIZE = 50; // Process 50 products at a time
+      const BATCH_SIZE = 20; // Process 20 products at a time for better transaction handling
       const batches = [];
       
       // Split calculations into batches
@@ -85,15 +85,21 @@ export class ImportBatchManager {
         batches.push(calculations.slice(i, i + BATCH_SIZE));
       }
       
-      // Process each batch in separate transactions
-      for (const [batchIndex, batch] of batches.entries()) {
-        const batchResult = await db.$transaction(async (tx) => {
+      // Process each batch in separate transactions with retry logic
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        let retryCount = 0;
+        const MAX_RETRIES = 2;
+        
+        const processBatch = async (): Promise<{ duplicates: string[]; productsCreated: number; dailyDataCreated: number; }> => {
+          return await db.$transaction(async (tx) => {
           const batchDuplicates: string[] = [];
           let batchProductsCreated = 0;
           let batchDailyDataCreated = 0;
           
           // Process each product calculation in this batch
-          for (const [index, productCalc] of batch.entries()) {
+          for (let index = 0; index < batch.length; index++) {
+            const productCalc = batch[index];
             const overallIndex = batchIndex * BATCH_SIZE + index;
             const progress = 50 + Math.floor((overallIndex / calculations.length) * 40);
             onProgress?.({
@@ -164,14 +170,42 @@ export class ImportBatchManager {
             dailyDataCreated: batchDailyDataCreated 
           };
         }, {
-          maxWait: 10000, // Wait a maximum of 10 seconds to get a transaction from the pool
-          timeout: 30000, // Allow transaction to run for up to 30 seconds
+          maxWait: 15000, // Wait a maximum of 15 seconds to get a transaction from the pool
+          timeout: 60000, // Allow transaction to run for up to 60 seconds
         });
+      };
+
+      let batchResult;
+      while (retryCount <= MAX_RETRIES) {
+        try {
+          batchResult = await processBatch();
+          break; // Success, exit retry loop
+        } catch (error) {
+          retryCount++;
+          if (retryCount > MAX_RETRIES) {
+            throw error; // Re-throw after max retries
+          }
+          
+          onProgress?.({
+            stage: 'saving',
+            message: `Retrying batch ${batchIndex + 1}/${batches.length} (attempt ${retryCount + 1})`,
+            progress: 50 + Math.floor((batchIndex / batches.length) * 40)
+          });
+          
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
         
         // Aggregate results
         duplicateProducts.push(...batchResult.duplicates);
         productsCreated += batchResult.productsCreated;
         dailyDataCreated += batchResult.dailyDataCreated;
+        
+        // Add a small delay between batches to reduce database load
+        if (batchIndex < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+        }
       }
       
       const result = { duplicateProducts, productsCreated, dailyDataCreated };
