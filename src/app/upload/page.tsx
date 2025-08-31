@@ -216,29 +216,6 @@ export default function UploadPage() {
               )}
             </div>
 
-            {/* Help Section */}
-            <div className="mt-8 bg-gray-50 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-[var(--color-night)] mb-3">Need Help?</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Common Issues</h3>
-                  <ul className="space-y-1 text-sm text-gray-600">
-                    <li>• Check column headers match expected format</li>
-                    <li>• Ensure numeric data is properly formatted</li>
-                    <li>• Remove any merged cells or formatting</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Sample Data</h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Download a sample Excel template to see the expected format.
-                  </p>
-                  <Button variant="outline" size="sm">
-                    Download Template
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
