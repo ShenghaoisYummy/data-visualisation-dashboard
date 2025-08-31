@@ -464,7 +464,22 @@ export default function FileUpload({
       
       {/* File Format Help */}
       <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Expected Excel Format</h4>
+        <div className="flex justify-between items-start mb-3">
+          <h4 className="text-sm font-medium text-gray-700">Expected Excel Format</h4>
+          <button
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = '/api/sample';
+              link.download = 'ProductData_Sample.xlsx';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="text-xs text-[var(--color-blue-ink)] hover:text-[var(--color-blue-ink)]/80 font-medium underline"
+          >
+            Download Sample →
+          </button>
+        </div>
         <div className="text-xs text-gray-600 space-y-1">
           <p>• Required columns: ID, Product Name, Opening Inventory</p>
           <p>• Daily data columns: Procurement Qty/Price (Day 1-3), Sales Qty/Price (Day 1-3)</p>
