@@ -197,10 +197,12 @@ export class ImportBatchManager {
         }
       }
         
-        // Aggregate results
-        duplicateProducts.push(...batchResult.duplicates);
-        productsCreated += batchResult.productsCreated;
-        dailyDataCreated += batchResult.dailyDataCreated;
+        // Aggregate results (only if batchResult was successfully assigned)
+        if (batchResult) {
+          duplicateProducts.push(...batchResult.duplicates);
+          productsCreated += batchResult.productsCreated;
+          dailyDataCreated += batchResult.dailyDataCreated;
+        }
         
         // Add a small delay between batches to reduce database load
         if (batchIndex < batches.length - 1) {
