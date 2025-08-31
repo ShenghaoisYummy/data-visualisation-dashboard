@@ -55,6 +55,7 @@ export default function FileUpload({
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
   
   const isUploading = uploadProgress !== null && uploadProgress.stage !== 'completed' && uploadProgress.stage !== 'failed';
   
@@ -65,8 +66,8 @@ export default function FileUpload({
     setUploadResult(null);
     setUploadProgress({
       stage: 'uploading',
-      message: 'Uploading file...',
-      progress: 0
+      message: 'Preparing file upload...',
+      progress: 5
     });
     
     onUploadStart?.();
@@ -75,21 +76,80 @@ export default function FileUpload({
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      // Update progress for file validation
+      setUploadProgress({
+        stage: 'uploading',
+        message: 'Validating file format...',
+        progress: 10
       });
       
-      const result = await response.json();
+      // Use XMLHttpRequest for upload progress tracking
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr; // Store reference for potential cancellation
+      
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const uploadPercent = Math.round((event.loaded / event.total) * 30); // Upload is 30% of total
+            setUploadProgress({
+              stage: 'uploading',
+              message: `Uploading file... ${Math.round((event.loaded / event.total) * 100)}%`,
+              progress: 10 + uploadPercent
+            });
+          }
+        });
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            try {
+              const errorResult = JSON.parse(xhr.responseText);
+              reject(new Error(errorResult.error || `HTTP ${xhr.status}`));
+            } catch (e) {
+              reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+            }
+          }
+        });
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error occurred'));
+        });
+        
+        xhr.addEventListener('timeout', () => {
+          reject(new Error('Upload timeout'));
+        });
+        
+        xhr.open('POST', '/api/upload');
+        xhr.timeout = 600000; // 10 minutes timeout for large files
+        xhr.send(formData);
+      });
+      
+      const result = await uploadPromise;
+      
+      // Show processing completion message
+      setUploadProgress({
+        stage: 'parsing',
+        message: 'Server processing complete! Finalizing...',
+        progress: 95
+      });
+      
+      // Small delay to show the completion state
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setUploadProgress({
-        stage: response.ok ? 'completed' : 'failed',
-        message: response.ok ? 'Upload completed successfully!' : 'Upload failed',
-        progress: response.ok ? 100 : 0
+        stage: 'completed',
+        message: 'Upload completed successfully!',
+        progress: 100
       });
       
       const uploadResult: UploadResult = {
-        success: response.ok,
+        success: true,
         batchId: result.batchId,
         summary: result.summary,
         error: result.error,
@@ -101,6 +161,12 @@ export default function FileUpload({
       onUploadComplete?.(uploadResult);
       
     } catch (error) {
+      // Check if error was due to cancellation
+      if (error instanceof Error && error.message === 'Upload cancelled') {
+        setUploadProgress(null);
+        setUploadResult(null);
+        return;
+      }
       const failedResult: UploadResult = {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -108,14 +174,24 @@ export default function FileUpload({
       
       setUploadProgress({
         stage: 'failed',
-        message: 'Upload failed',
+        message: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         progress: 0
       });
       
       setUploadResult(failedResult);
       onUploadComplete?.(failedResult);
+    } finally {
+      xhrRef.current = null; // Clear reference
     }
   }, [disabled, isUploading, onUploadComplete, onUploadStart]);
+  
+  const cancelUpload = useCallback(() => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      setUploadProgress(null);
+      setUploadResult(null);
+    }
+  }, []);
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -192,17 +268,77 @@ export default function FileUpload({
         />
         
         {isUploading ? (
-          <div className="space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-blue-ink)] mx-auto"></div>
-            <div>
-              <p className="text-lg font-medium text-gray-700">
-                {uploadProgress?.message}
-              </p>
-              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+          <div className="space-y-6">
+            {/* Progress Icon */}
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-[var(--color-blue-ink)] mx-auto"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-semibold text-[var(--color-blue-ink)]">
+                  {uploadProgress?.progress || 0}%
+                </span>
+              </div>
+            </div>
+            
+            {/* Progress Details */}
+            <div className="space-y-3">
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-800">
+                  {uploadProgress?.message}
+                </p>
+                <p className="text-sm text-gray-500 capitalize">
+                  {uploadProgress?.stage.replace(/([A-Z])/g, ' $1').trim()}
+                </p>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div 
-                  className="bg-[var(--color-blue-ink)] h-2 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-[var(--color-blue-ink)] to-[var(--color-eucalyptus)] h-3 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${uploadProgress?.progress || 0}%` }}
                 ></div>
+              </div>
+              
+              {/* Stage Indicators */}
+              <div className="flex justify-between items-center text-xs text-gray-500 px-1">
+                <div className={`flex flex-col items-center space-y-1 ${uploadProgress?.stage === 'uploading' ? 'text-[var(--color-blue-ink)] font-medium' : (uploadProgress && ['parsing', 'validating', 'calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'text-[var(--color-eucalyptus)]' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full ${uploadProgress?.stage === 'uploading' ? 'bg-[var(--color-blue-ink)]' : (uploadProgress && ['parsing', 'validating', 'calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'bg-[var(--color-eucalyptus)]' : 'bg-gray-300'}`}></div>
+                  <span>Upload</span>
+                </div>
+                <div className={`flex flex-col items-center space-y-1 ${uploadProgress?.stage === 'parsing' ? 'text-[var(--color-blue-ink)] font-medium' : (uploadProgress && ['validating', 'calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'text-[var(--color-eucalyptus)]' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full ${uploadProgress?.stage === 'parsing' ? 'bg-[var(--color-blue-ink)]' : (uploadProgress && ['validating', 'calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'bg-[var(--color-eucalyptus)]' : 'bg-gray-300'}`}></div>
+                  <span>Parse</span>
+                </div>
+                <div className={`flex flex-col items-center space-y-1 ${uploadProgress?.stage === 'validating' ? 'text-[var(--color-blue-ink)] font-medium' : (uploadProgress && ['calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'text-[var(--color-eucalyptus)]' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full ${uploadProgress?.stage === 'validating' ? 'bg-[var(--color-blue-ink)]' : (uploadProgress && ['calculating', 'saving', 'completed'].includes(uploadProgress.stage)) ? 'bg-[var(--color-eucalyptus)]' : 'bg-gray-300'}`}></div>
+                  <span>Validate</span>
+                </div>
+                <div className={`flex flex-col items-center space-y-1 ${uploadProgress?.stage === 'calculating' ? 'text-[var(--color-blue-ink)] font-medium' : (uploadProgress && ['saving', 'completed'].includes(uploadProgress.stage)) ? 'text-[var(--color-eucalyptus)]' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full ${uploadProgress?.stage === 'calculating' ? 'bg-[var(--color-blue-ink)]' : (uploadProgress && ['saving', 'completed'].includes(uploadProgress.stage)) ? 'bg-[var(--color-eucalyptus)]' : 'bg-gray-300'}`}></div>
+                  <span>Calculate</span>
+                </div>
+                <div className={`flex flex-col items-center space-y-1 ${uploadProgress?.stage === 'saving' ? 'text-[var(--color-blue-ink)] font-medium' : (uploadProgress && ['completed'].includes(uploadProgress.stage)) ? 'text-[var(--color-eucalyptus)]' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full ${uploadProgress?.stage === 'saving' ? 'bg-[var(--color-blue-ink)]' : (uploadProgress && ['completed'].includes(uploadProgress.stage)) ? 'bg-[var(--color-eucalyptus)]' : 'bg-gray-300'}`}></div>
+                  <span>Save</span>
+                </div>
+              </div>
+              
+              {/* Processing Time Estimate */}
+              {uploadProgress?.stage === 'saving' && (
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 italic">
+                    Processing large datasets may take several minutes...
+                  </p>
+                </div>
+              )}
+              
+              {/* Cancel Button */}
+              <div className="text-center">
+                <button
+                  onClick={cancelUpload}
+                  className="text-sm text-gray-500 hover:text-[var(--color-cherry)] transition-colors underline"
+                >
+                  Cancel Upload
+                </button>
               </div>
             </div>
           </div>
@@ -218,12 +354,25 @@ export default function FileUpload({
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Upload Successful!</h3>
                   {uploadResult.summary && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <p>Products created: {uploadResult.summary.import?.productsCreated || 0}</p>
-                      <p>Processing time: {uploadResult.summary.import?.processingTimeMs || 0}ms</p>
-                      {uploadResult.summary.calculations && (
-                        <p>Total value: ${(uploadResult.summary.calculations.totalSalesValue || 0).toFixed(2)}</p>
-                      )}
+                    <div className="mt-3 space-y-2 text-sm text-gray-600">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="font-medium">Products:</span> {uploadResult.summary.import?.productsCreated || 0}
+                          </div>
+                          <div>
+                            <span className="font-medium">Time:</span> {((uploadResult.summary.import?.processingTimeMs || 0) / 1000).toFixed(1)}s
+                          </div>
+                          {uploadResult.summary.calculations && (
+                            <div className="col-span-2">
+                              <span className="font-medium">Total Value:</span> ${(uploadResult.summary.calculations.totalSalesValue || 0).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-[var(--color-eucalyptus)] font-medium">
+                        ✓ Data processed and ready for analysis
+                      </p>
                     </div>
                   )}
                 </div>
