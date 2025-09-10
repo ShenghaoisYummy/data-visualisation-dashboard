@@ -6,6 +6,10 @@ A comprehensive data visualization dashboard for an Asian grocery chain to analy
 
 Feel free to explore the live [Demo](https://data-visualisation-dashboard-three.vercel.app/dashboard)! Authentication credentials and deployment details are available in the [deployment guide](docs/deployment-guide.md).
 
+### Preview
+
+<img width="1478" height="764" alt="Screenshot 2025-09-10 at 15 33 54" src="https://github.com/user-attachments/assets/1b08a229-c013-43cb-92c7-7e0e7d439324" />
+
 ## 🚀 Features
 
 - **🔐 Staff-Only Registration**: Invitation code-based user registration system with lifecycle management
